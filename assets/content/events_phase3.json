@@ -1,0 +1,5377 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "official_phase3_v1",
+  "scenarioId": "day_shift",
+  "events": [
+    {
+      "eventId": "call_water",
+      "title": "水を一杯",
+      "description": "ナースコールで水を頼まれた。同時に朝の記録も開いたまま。",
+      "category": "call",
+      "timeRange": {
+        "min": 510,
+        "max": 760
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "call"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {
+        "callCount": 1
+      },
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        },
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "部屋へ行き様子も聞く",
+          "hint": "丁寧に対応・約16分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "水を一杯に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 16,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "水を一杯の途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "近くの仲間に頼み記録を進める",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "水を一杯の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "水を届けて記録は後に回す",
+          "hint": "分担や整理・約9分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "水を一杯の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "vitals_round",
+      "title": "朝のバイタル",
+      "description": "予定の測定中、別室のコールが重なる。",
+      "category": "care",
+      "timeRange": {
+        "min": 510,
+        "max": 610
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "気になる値を再確認する",
+          "hint": "丁寧に対応・約17分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "朝のバイタルに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 17,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "予定分を先に回り切る",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "朝のバイタルの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間と分担して測る",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "朝のバイタルの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "iv_alarm",
+      "title": "点滴ポンプの音",
+      "description": "点滴のアラーム。処置の準備も時間が迫る。",
+      "category": "care",
+      "timeRange": {
+        "min": 510,
+        "max": 835
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "現場で原因まで確認する",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "点滴ポンプの音に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "安全を確認し準備へ戻る",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "点滴ポンプの音の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "応援を呼んで一緒に確認する",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "点滴ポンプの音の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "morning_meds",
+      "title": "朝の内服",
+      "description": "内服の確認と、食事を待つ患者への声かけが同時に来た。",
+      "category": "care",
+      "timeRange": {
+        "min": 510,
+        "max": 635
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "一人ずつ説明して渡す",
+          "hint": "丁寧に対応・約19分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "朝の内服に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 19,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "必要事項を確認して手際よく渡す",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "朝の内服の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間と分担し食事にも目を配る",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "朝の内服の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "blood_draw",
+      "title": "採血の順番",
+      "description": "採血の順番を待つ間に書類が積まれていく。",
+      "category": "care",
+      "timeRange": {
+        "min": 510,
+        "max": 685
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        },
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "落ち着いて採血と説明をする",
+          "hint": "丁寧に対応・約20分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "採血の順番に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "採血の順番の途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 24,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "採血を先に済ませ記録を後にする",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "採血の順番の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "待ち時間に書類を一件片付ける",
+          "hint": "分担や整理・約9分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "採血の順番の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "exam_transport",
+      "title": "検査へ出発",
+      "description": "検査室から呼び出し。移送と病棟のケアが重なる。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 535,
+        "max": 810
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "移送に付き添い確認する",
+          "hint": "丁寧に対応・約16分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "検査へ出発に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 16,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                },
+                "createTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "連絡を整えて移送を頼む",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "検査へ出発の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "準備を優先しケアは後で行う",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "検査へ出発の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "linen_change",
+      "title": "シーツ交換",
+      "description": "清潔ケアの希望と予定の処置がぶつかった。",
+      "category": "care",
+      "timeRange": {
+        "min": 535,
+        "max": 885
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "本人の希望に合わせて交換する",
+          "hint": "丁寧に対応・約17分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "シーツ交換に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 17,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "処置を先にし交換は後で行う",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "シーツ交換の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間と一緒に短時間で整える",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "シーツ交換の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "breakfast_help",
+      "title": "朝食の介助",
+      "description": "食事の手助けを求める声。医師からの確認も待っている。",
+      "category": "care",
+      "timeRange": {
+        "min": 535,
+        "max": 660
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "食べられるまで付き添う",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "朝食の介助に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "安全を確認して連絡を先にする",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "朝食の介助の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "チームと分担し食事を進める",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "朝食の介助の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "toilet_call",
+      "title": "トイレのコール",
+      "description": "トイレ介助のコール。自分もトイレに行きたい。",
+      "category": "call",
+      "timeRange": {
+        "min": 560,
+        "max": 935
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "call",
+        "toilet"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {
+        "callCount": 1
+      },
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "患者の移動をゆっくり支える",
+          "hint": "丁寧に対応・約19分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "トイレのコールに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 19,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "トイレのコールの途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 23,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "仲間に声をかけ自分もトイレへ行く",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "トイレのコールの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "安全を確認し手早く介助する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "トイレのコールの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 150
+                },
+                "scoreDelta": {
+                  "team": 80
+                },
+                "counters": {
+                  "toiletCount": 1
+                },
+                "setBladderAfter": 1000
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "fall_prevention",
+      "title": "立ち上がりの気配",
+      "description": "転倒リスクのある患者が一人で立ち上がろうとしている。",
+      "category": "care",
+      "timeRange": {
+        "min": 560,
+        "max": 960
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "major"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "そばで話を聞き環境を整える",
+          "hint": "丁寧に対応・約20分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "立ち上がりの気配に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "すぐ支え必要な声かけをする",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "立ち上がりの気配の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間を呼び対応を分担する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "立ち上がりの気配の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "doctor_question",
+      "title": "医師への確認",
+      "description": "曖昧な指示を確認したいが、電話はつながりにくい。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 560,
+        "max": 910
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "確認が取れるまで調整する",
+          "hint": "丁寧に対応・約16分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "医師への確認に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 16,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                },
+                "createTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "要点を整理して折り返しを待つ",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "医師への確認の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "リーダーに状況を共有する",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "医師への確認の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "new_order",
+      "title": "指示変更",
+      "description": "指示が更新された。患者説明と記録の順番に迷う。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 585,
+        "max": 960
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "変更内容を丁寧に説明する",
+          "hint": "丁寧に対応・約17分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "指示変更に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 17,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "記録とチーム共有を先にする",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "指示変更の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "要点だけ伝え詳細説明を後にする",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "指示変更の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "family_visit",
+      "title": "面会の質問",
+      "description": "家族から今日の見通しを聞かれた。別室の処置も始まる。",
+      "category": "family",
+      "timeRange": {
+        "min": 585,
+        "max": 935
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "時間を取り落ち着いて話す",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "面会の質問に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "面会の質問の途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 22,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "要点を伝え処置へ向かう",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "面会の質問の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "担当者につないで共有を残す",
+          "hint": "分担や整理・約9分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "面会の質問の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "phone_lab",
+      "title": "検査室からの電話",
+      "description": "検査室から確認の電話。患者の待ち時間も伸びている。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 585,
+        "max": 860
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "条件を一つずつ照合する",
+          "hint": "丁寧に対応・約19分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "検査室からの電話に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 19,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "要件をまとめて折り返す",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "検査室からの電話の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "リーダーに確認を頼み患者へ戻る",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "検査室からの電話の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "junior_support",
+      "title": "新人からの相談",
+      "description": "新人が処置の段取りを確認したいと言う。自分の記録も残る。",
+      "category": "team",
+      "timeRange": {
+        "min": 610,
+        "max": 935
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "一緒に手順を整理する",
+          "hint": "丁寧に対応・約20分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "新人からの相談に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "要点を伝えて記録へ戻る",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "新人からの相談の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "別の仲間も交えて役割を分ける",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "新人からの相談の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "colleague_request",
+      "title": "同僚からの頼み",
+      "description": "同僚のケアが重なり助けを求められた。自分の予定も詰まる。",
+      "category": "team",
+      "timeRange": {
+        "min": 610,
+        "max": 960
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "今すぐ一緒にケアへ入る",
+          "hint": "丁寧に対応・約16分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "同僚からの頼みに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 16,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "今できる範囲を伝える",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "同僚からの頼みの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "互いの予定を見て分担を組み直す",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "同僚からの頼みの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "leader_request",
+      "title": "リーダーからの依頼",
+      "description": "急な病棟全体の確認依頼。個人の残務が押している。",
+      "category": "team",
+      "timeRange": {
+        "min": 610,
+        "max": 990
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "全体の確認を引き受ける",
+          "hint": "丁寧に対応・約17分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "リーダーからの依頼に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 17,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "リーダーからの依頼の途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 21,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "締切を相談して自分の仕事を進める",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "リーダーからの依頼の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "範囲を絞って他の人と分ける",
+          "hint": "分担や整理・約9分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "リーダーからの依頼の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "chart_gap",
+      "title": "記録の空欄",
+      "description": "朝の記録に空欄を見つけた。次のケアに向かう時間だ。",
+      "category": "record",
+      "timeRange": {
+        "min": 635,
+        "max": 1005
+      },
+      "conditions": [],
+      "weight": 1.4,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "今ここで確認して埋める",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "記録の空欄に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "要点をメモしケアへ向かう",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "記録の空欄の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間に状況を伝え記録を進める",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "記録の空欄の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "care_plan",
+      "title": "看護計画の見直し",
+      "description": "状態変化に合わせた計画の見直し。患者との会話も必要。",
+      "category": "record",
+      "timeRange": {
+        "min": 635,
+        "max": 990
+      },
+      "conditions": [],
+      "weight": 1.4,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "患者と話し計画を整える",
+          "hint": "丁寧に対応・約19分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "看護計画の見直しに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 19,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "先に計画だけ更新する",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "看護計画の見直しの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "チームに観察を頼み記録を進める",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "看護計画の見直しの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "admission_notice",
+      "title": "入院の連絡",
+      "description": "新しい入院の連絡。ベッド準備と担当患者のケアが同時だ。",
+      "category": "admission",
+      "timeRange": {
+        "min": 635,
+        "max": 935
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "major"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {
+        "admissionCount": 1
+      },
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "受け入れまで自分で整える",
+          "hint": "丁寧に対応・約20分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "入院の連絡に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "準備を分担してケアを続ける",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "入院の連絡の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "受け入れ時刻を調整する",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "入院の連絡の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "discharge_papers",
+      "title": "退院書類",
+      "description": "退院の書類が届いた。説明を待つ家族と病棟電話が重なる。",
+      "category": "discharge",
+      "timeRange": {
+        "min": 660,
+        "max": 960
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        },
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "書類を確認し丁寧に説明する",
+          "hint": "丁寧に対応・約16分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "退院書類に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 16,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "退院書類の途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "書類を先にまとめ説明を短くする",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "退院書類の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "担当者と分担して確認する",
+          "hint": "分担や整理・約9分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "退院書類の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "transfer_bed",
+      "title": "転棟の段取り",
+      "description": "転棟の時刻が変わった。移送と申し送りを組み直す。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 660,
+        "max": 990
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "受け入れ先と細部まで確認する",
+          "hint": "丁寧に対応・約17分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "転棟の段取りに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 17,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "要点を先に送り残りを後で整える",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "転棟の段取りの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "リーダーと分担を相談する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "転棟の段取りの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "lunch_tray",
+      "title": "昼食の配膳",
+      "description": "食事が届いた。患者の食事介助と自分の昼食が重なる。",
+      "category": "care",
+      "timeRange": {
+        "min": 685,
+        "max": 810
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "food"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "患者のペースで介助する",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "昼食の配膳に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "安全を確認して自分も食べる",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "昼食の配膳の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間と交代で食事を支える",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "昼食の配膳の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "water_bottle",
+      "title": "水分のひと口",
+      "description": "喉が渇いた。次のコールと連絡がすぐ来そうだ。",
+      "category": "self",
+      "timeRange": {
+        "min": 685,
+        "max": 1005
+      },
+      "conditions": [
+        {
+          "field": "meters.hp",
+          "op": "lte",
+          "value": 7500
+        }
+      ],
+      "weight": 1.4,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "少し休み水を飲む",
+          "hint": "丁寧に対応・約12分",
+          "actionType": "rest",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "水分のひと口に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "hp": 350,
+                  "mental": 300,
+                  "hunger": -900
+                },
+                "counters": {
+                  "breakMinutes": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "連絡を片付けてから飲む",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "水分のひと口の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -70,
+                  "mental": -100
+                },
+                "scoreDelta": {
+                  "risk": 100
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "水を飲みながら段取りを共有する",
+          "hint": "分担や整理・約9分",
+          "actionType": "selfCare",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "水分のひと口の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": 180,
+                  "mental": 130,
+                  "hunger": -350
+                },
+                "scoreDelta": {
+                  "team": 80
+                },
+                "counters": {
+                  "breakMinutes": 6
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "staff_break",
+      "title": "休憩の順番",
+      "description": "休憩交代の順番が来たが、ケアの予定がずれ込んでいる。",
+      "category": "self",
+      "timeRange": {
+        "min": 710,
+        "max": 860
+      },
+      "conditions": [],
+      "weight": 1.4,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "交代を頼んで休憩に入る",
+          "hint": "丁寧に対応・約12分",
+          "actionType": "rest",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "休憩の順番に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "hp": 350,
+                  "mental": 300,
+                  "hunger": -900
+                },
+                "counters": {
+                  "breakMinutes": 10
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "休憩の順番の途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 24,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "ケアを終えてから休憩する",
+          "hint": "時間を優先・約10分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "休憩の順番の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "hp": -70,
+                  "mental": -100
+                },
+                "scoreDelta": {
+                  "risk": 100
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "休憩を短く区切り引き継ぐ",
+          "hint": "分担や整理・約9分",
+          "actionType": "selfCare",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "休憩の順番の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": 180,
+                  "mental": 130,
+                  "hunger": -350
+                },
+                "scoreDelta": {
+                  "team": 80
+                },
+                "counters": {
+                  "breakMinutes": 6
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "toilet_self",
+      "title": "自分のトイレ",
+      "description": "トイレを我慢している。今なら少しだけ抜けられる。",
+      "category": "self",
+      "timeRange": {
+        "min": 710,
+        "max": 1005
+      },
+      "conditions": [
+        {
+          "field": "meters.bladder",
+          "op": "gte",
+          "value": 3500
+        }
+      ],
+      "weight": 1.4,
+      "tags": [
+        "toilet"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "仲間に伝えてトイレへ行く",
+          "hint": "丁寧に対応・約5分",
+          "actionType": "rest",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "自分のトイレに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 5,
+                "meterDelta": {
+                  "mental": 200
+                },
+                "counters": {
+                  "toiletCount": 1
+                },
+                "setBladderAfter": 1000
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "もう一件終わらせてから行く",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "自分のトイレの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -70,
+                  "mental": -100
+                },
+                "scoreDelta": {
+                  "risk": 100
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "用件を整理し短く交代を頼む",
+          "hint": "分担や整理・約7分",
+          "actionType": "selfCare",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "自分のトイレの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 80
+                },
+                "counters": {
+                  "toiletCount": 1
+                },
+                "setBladderAfter": 1000
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "snack_choice",
+      "title": "空腹の合図",
+      "description": "空腹で集中が落ちてきた。午後の処置が始まる。",
+      "category": "self",
+      "timeRange": {
+        "min": 735,
+        "max": 960
+      },
+      "conditions": [
+        {
+          "field": "meters.hunger",
+          "op": "gte",
+          "value": 3000
+        }
+      ],
+      "weight": 1.4,
+      "tags": [
+        "food"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "軽く食べてから向かう",
+          "hint": "丁寧に対応・約12分",
+          "actionType": "rest",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "空腹の合図に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "hp": 350,
+                  "mental": 300,
+                  "hunger": -900
+                },
+                "counters": {
+                  "breakMinutes": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "先に処置へ向かう",
+          "hint": "時間を優先・約10分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "空腹の合図の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "hp": -70,
+                  "mental": -100
+                },
+                "scoreDelta": {
+                  "risk": 100
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間と順番を相談して食べる",
+          "hint": "分担や整理・約9分",
+          "actionType": "selfCare",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "空腹の合図の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": 180,
+                  "mental": 130,
+                  "hunger": -350
+                },
+                "scoreDelta": {
+                  "team": 80
+                },
+                "counters": {
+                  "breakMinutes": 6
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "acute_warning",
+      "title": "急変の兆し",
+      "description": "いつもと違う反応。ほかの患者の予定も同時に動いている。",
+      "category": "acute",
+      "timeRange": {
+        "min": 735,
+        "max": 960
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "major"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {
+        "acuteChangeCount": 1
+      },
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "そばを離れずチームを呼ぶ",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "急変の兆しに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "必要な確認をして連絡する",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "急変の兆しの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "役割分担を明確にして対応する",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "急変の兆しの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "procedure_queue",
+      "title": "処置が重なる",
+      "description": "複数の処置が同じ時間に集まった。順番を決める必要がある。",
+      "category": "care",
+      "timeRange": {
+        "min": 735,
+        "max": 990
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "患者の状態を見て丁寧に進める",
+          "hint": "丁寧に対応・約19分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "処置が重なるに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 19,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "処置が重なるの途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 23,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "緊急度で順番を決め手早く進める",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "処置が重なるの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "チームに相談して分担する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "処置が重なるの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "recheck_vitals",
+      "title": "再測定",
+      "description": "気になる値の再測定を頼まれた。記録はまだ途中。",
+      "category": "care",
+      "timeRange": {
+        "min": 760,
+        "max": 1005
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "変化を確認して報告する",
+          "hint": "丁寧に対応・約20分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "再測定に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "再測定を済ませ記録に戻る",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "再測定の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間に共有して記録を片付ける",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "再測定の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "diet_change",
+      "title": "食事形態の変更",
+      "description": "食事形態の連絡が届く。配膳と確認が同時に進む。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 760,
+        "max": 860
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "本人と厨房まで確認する",
+          "hint": "丁寧に対応・約16分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "食事形態の変更に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 16,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                },
+                "createTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "配膳を止め要点だけ確認する",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "食事形態の変更の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "担当部署と分担して調整する",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "食事形態の変更の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "paper_signature",
+      "title": "書類の署名",
+      "description": "署名が必要な書類が回ってきた。患者のコールも鳴っている。",
+      "category": "record",
+      "timeRange": {
+        "min": 760,
+        "max": 1005
+      },
+      "conditions": [],
+      "weight": 1.4,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "内容を読み切って説明する",
+          "hint": "丁寧に対応・約17分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "書類の署名に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 17,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "先にコールへ向かい書類を残す",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "書類の署名の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間と分担し書類を確認する",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "書類の署名の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "bed_clean",
+      "title": "ベッドの準備",
+      "description": "次の入院に備えるベッドと、今いる患者の清潔ケア。",
+      "category": "care",
+      "timeRange": {
+        "min": 785,
+        "max": 960
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "両方の準備を丁寧に進める",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "ベッドの準備に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "ベッドの準備の途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 22,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "今いる患者のケアを先にする",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "ベッドの準備の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "入院準備を仲間に頼む",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "ベッドの準備の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "family_call",
+      "title": "家族からの電話",
+      "description": "家族が状況を気にかけている。病棟の予定も押し始めた。",
+      "category": "family",
+      "timeRange": {
+        "min": 785,
+        "max": 1005
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "今の様子を丁寧に伝える",
+          "hint": "丁寧に対応・約19分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "家族からの電話に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 19,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "要点を伝え後で連絡する",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "家族からの電話の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "リーダーと情報を合わせて返答する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "家族からの電話の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "pharmacy_check",
+      "title": "薬剤部との確認",
+      "description": "薬剤部から確認が入る。患者説明と記録が並ぶ。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 785,
+        "max": 990
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "指示を照合して丁寧に返す",
+          "hint": "丁寧に対応・約20分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "薬剤部との確認に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "要点を返して記録へ戻る",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "薬剤部との確認の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "医師と薬剤部の確認を調整する",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "薬剤部との確認の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "late_call",
+      "title": "午後のナースコール",
+      "description": "午後のコールが続く。記録の進み具合が気になる。",
+      "category": "call",
+      "timeRange": {
+        "min": 810,
+        "max": 1005
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "call"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {
+        "callCount": 1
+      },
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "一件ずつ話を聞き対応する",
+          "hint": "丁寧に対応・約16分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "午後のナースコールに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 16,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "安全を確認し記録も進める",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "午後のナースコールの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間とコールを分担する",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "午後のナースコールの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "mobility_help",
+      "title": "歩行の付き添い",
+      "description": "歩く練習をしたい患者。転倒への注意と時間が必要だ。",
+      "category": "care",
+      "timeRange": {
+        "min": 810,
+        "max": 990
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "本人のペースで付き添う",
+          "hint": "丁寧に対応・約17分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "歩行の付き添いに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 17,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "歩行の付き添いの途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 21,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "短い距離に絞って付き添う",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "歩行の付き添いの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "他職種と時刻を調整する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "歩行の付き添いの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "care": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "discharge_followup",
+      "title": "退院後の確認",
+      "description": "退院後の連絡先を確認したい。別の患者のケアも待つ。",
+      "category": "discharge",
+      "timeRange": {
+        "min": 835,
+        "max": 1005
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "家族と一緒に確認する",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "退院後の確認に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "資料を渡し要点を伝える",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "退院後の確認の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "相談員と確認を分担する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "退院後の確認の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "change_in_plan",
+      "title": "予定の組み直し",
+      "description": "検査時刻の変更が重なり、午後の予定を組み直す。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 835,
+        "max": 1005
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "関係部署に順番に連絡する",
+          "hint": "丁寧に対応・約19分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "予定の組み直しに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 19,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "優先順位だけ決めて動く",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "予定の組み直しの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "リーダーと全体を組み直す",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "予定の組み直しの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "record_backlog",
+      "title": "記録の山",
+      "description": "未入力の記録が目につく。コールも気になって手が止まる。",
+      "category": "record",
+      "timeRange": {
+        "min": 860,
+        "max": 1020
+      },
+      "conditions": [
+        {
+          "field": "tasks.record",
+          "op": "gte",
+          "value": 2
+        }
+      ],
+      "weight": 1.4,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "記録をまとめて片付ける",
+          "hint": "丁寧に対応・約20分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "記録の山に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "重要事項だけ先に入力する",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "記録の山の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "チームへ状況を伝えて集中する",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "記録の山の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "afternoon_toilet",
+      "title": "排泄ケア",
+      "description": "排泄の介助を頼まれた。申し送りの準備も始まる。",
+      "category": "care",
+      "timeRange": {
+        "min": 860,
+        "max": 1005
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        },
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "プライバシーに配慮し介助する",
+          "hint": "丁寧に対応・約16分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "排泄ケアに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 16,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "排泄ケアの途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "介助して申し送り準備へ戻る",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "排泄ケアの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "近くの仲間と役割を分ける",
+          "hint": "分担や整理・約9分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "排泄ケアの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "evening_meds",
+      "title": "夕方の内服確認",
+      "description": "夕方の内服の確認。帰り際の書類も届いた。",
+      "category": "care",
+      "timeRange": {
+        "min": 885,
+        "max": 1020
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "本人と一緒に確認して渡す",
+          "hint": "丁寧に対応・約17分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "夕方の内服確認に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 17,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "必要事項を確認して書類へ戻る",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "夕方の内服確認の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間と分担して確認する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "夕方の内服確認の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "shift_phone",
+      "title": "終業前の電話",
+      "description": "終業前の電話。次の勤務に伝える情報が増えた。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 910,
+        "max": 1020
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "内容を詳しく確認して共有する",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "終業前の電話に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "要点を記録し後で伝える",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "終業前の電話の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "リーダーと伝達を分担する",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "終業前の電話の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "handover_notes",
+      "title": "申し送りメモ",
+      "description": "最終申し送りのメモが散らばっている。ケアもまだ一件残る。",
+      "category": "record",
+      "timeRange": {
+        "min": 910,
+        "max": 1020
+      },
+      "conditions": [],
+      "weight": 1.4,
+      "tags": [],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "メモを整理してからケアへ向かう",
+          "hint": "丁寧に対応・約19分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "申し送りメモに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 19,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "ケアを済ませてから整理する",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "申し送りメモの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "チームと情報を突き合わせる",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "申し送りメモの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "last_round",
+      "title": "最後の巡視",
+      "description": "定時が見えてきた。最後の巡視と記録の締めが重なる。",
+      "category": "care",
+      "timeRange": {
+        "min": 935,
+        "max": 1020
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "lateShift"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        },
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "一室ずつ様子を確かめる",
+          "hint": "丁寧に対応・約20分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "最後の巡視に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "最後の巡視の途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 24,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "気になる部屋を優先する",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "最後の巡視の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間と分担して見て回る",
+          "hint": "分担や整理・約9分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "最後の巡視の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "late_admission",
+      "title": "遅い入院連絡",
+      "description": "夕方に入院予定の連絡。準備と申し送りが同時に迫る。",
+      "category": "admission",
+      "timeRange": {
+        "min": 935,
+        "max": 1020
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "major",
+        "lateShift"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {
+        "admissionCount": 1
+      },
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "受け入れ準備を進める",
+          "hint": "丁寧に対応・約16分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "遅い入院連絡に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 16,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                },
+                "createTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "必要な準備だけ先に整える",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "遅い入院連絡の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "受け入れ先とチームで分担する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "遅い入院連絡の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "new_order_late",
+      "title": "夕方の追加指示",
+      "description": "新しい指示が届いた。引き継ぐ前に確認しておきたい。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 960,
+        "max": 1020
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "lateShift"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "医師に確認して情報をまとめる",
+          "hint": "丁寧に対応・約17分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "夕方の追加指示に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 17,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "必要事項を先に共有する",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "夕方の追加指示の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "リーダーと確認を分担する",
+          "hint": "分担や整理・約11分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "夕方の追加指示の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 11,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "call_near_end",
+      "title": "帰り際のコール",
+      "description": "帰り際にコール。本人も遠慮がちで、記録はまだ開いたまま。",
+      "category": "call",
+      "timeRange": {
+        "min": 960,
+        "max": 1020
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "call",
+        "lateShift"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {
+        "callCount": 1
+      },
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "時間を取って気持ちも聞く",
+          "hint": "丁寧に対応・約18分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "帰り際のコールに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 18,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "必要な対応をして記録へ戻る",
+          "hint": "時間を優先・約9分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "帰り際のコールの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "仲間と状況を共有する",
+          "hint": "分担や整理・約12分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "帰り際のコールの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 12,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "form_correction",
+      "title": "書類の差し戻し",
+      "description": "書類の記載を直してほしいと戻ってきた。申し送りも近い。",
+      "category": "record",
+      "timeRange": {
+        "min": 990,
+        "max": 1020
+      },
+      "conditions": [],
+      "weight": 1.4,
+      "tags": [
+        "lateShift"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [
+        {
+          "conditions": [
+            {
+              "field": "scores.team",
+              "op": "lte",
+              "value": 4000
+            }
+          ],
+          "factor": 1.6
+        },
+        {
+          "conditions": [
+            {
+              "field": "tasks.record",
+              "op": "gte",
+              "value": 5
+            }
+          ],
+          "factor": 1.3
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "内容を確認し丁寧に直す",
+          "hint": "丁寧に対応・約19分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 3,
+              "text": "書類の差し戻しに向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 19,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            },
+            {
+              "outcomeId": "interruption",
+              "weight": 1,
+              "text": "書類の差し戻しの途中で別の用件が重なり、対応を記録して次へつないだ。",
+              "effects": {
+                "durationMinutes": 23,
+                "meterDelta": {
+                  "mental": -160,
+                  "hp": -120
+                },
+                "scoreDelta": {
+                  "patient": 80,
+                  "team": -80
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "必要箇所を直して先へ進む",
+          "hint": "時間を優先・約7分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "書類の差し戻しの要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 7,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                },
+                "createTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "担当者に確認して手分けする",
+          "hint": "分担や整理・約9分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "書類の差し戻しの対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 9,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "record": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "eventId": "last_coordination",
+      "title": "最終調整",
+      "description": "他部署との連絡が一本残った。患者の様子も最後に見たい。",
+      "category": "coordination",
+      "timeRange": {
+        "min": 990,
+        "max": 1020
+      },
+      "conditions": [],
+      "weight": 1,
+      "tags": [
+        "lateShift"
+      ],
+      "maxPerRun": 1,
+      "onAppear": {},
+      "weightModifiers": [],
+      "choices": [
+        {
+          "choiceId": "careful",
+          "label": "連絡と患者確認を両方行う",
+          "hint": "丁寧に対応・約20分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "最終調整に向き合い、次の仕事へ進んだ。",
+              "effects": {
+                "durationMinutes": 20,
+                "meterDelta": {
+                  "hp": -100,
+                  "mental": 80
+                },
+                "scoreDelta": {
+                  "patient": 250,
+                  "team": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "quick",
+          "label": "先に連絡を済ませる",
+          "hint": "時間を優先・約8分",
+          "actionType": "work",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "最終調整の要点を押さえて先へ進んだ。",
+              "effects": {
+                "durationMinutes": 8,
+                "meterDelta": {
+                  "hp": -60,
+                  "mental": -80
+                },
+                "scoreDelta": {
+                  "patient": -80,
+                  "risk": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "choiceId": "share",
+          "label": "チームと連絡を分担する",
+          "hint": "分担や整理・約10分",
+          "actionType": "coordination",
+          "outcomes": [
+            {
+              "outcomeId": "expected",
+              "weight": 1,
+              "text": "最終調整の対応を分担し、残務を一件整理した。",
+              "effects": {
+                "durationMinutes": 10,
+                "meterDelta": {
+                  "mental": 100
+                },
+                "scoreDelta": {
+                  "team": 160,
+                  "patient": 40
+                },
+                "completeTasks": {
+                  "coordination": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

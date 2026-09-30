@@ -9,7 +9,7 @@ Future<GameController> loadGame() async {
   final files = await Future.wait([
     rootBundle.loadString('assets/content/balance_v1.json'),
     rootBundle.loadString('assets/content/titles_v1.json'),
-    rootBundle.loadString('assets/content/fixture_events.json'),
+    rootBundle.loadString('assets/content/events_phase3.json'),
   ]);
   return GameController(
     ContentLoader.load(files[0], files[1], files[2]),

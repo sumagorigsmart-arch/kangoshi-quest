@@ -146,7 +146,7 @@ class _QuestAppState extends State<QuestApp> {
                 child: const Text('遊び方'),
               ),
               const SizedBox(height: 20),
-              const Text('現在は検証用の3イベントで遊べます。', textAlign: TextAlign.center),
+              const Text('正式イベント50件から、今日の勤務が始まります。', textAlign: TextAlign.center),
             ],
           ),
         ),

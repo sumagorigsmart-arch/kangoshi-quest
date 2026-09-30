@@ -57,6 +57,7 @@ flutter:
     - assets/content/balance_v1.json
     - assets/content/titles_v1.json
     - assets/content/fixture_events.json
+    - assets/content/events_phase3.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

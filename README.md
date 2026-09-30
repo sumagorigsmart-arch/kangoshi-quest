@@ -1,76 +1,51 @@
-# 看護師クエスト Phase 2
+# 看護師クエスト Phase 3
 
-架空の日勤病棟のお仕事RPG。コピーは「今日も無事に定時で帰れ。」。仕様の正本は一階層上の `kangoshi-quest-mvp-v1.md`。Phase 1 の domain/content に Phase 2 の操作画面を重ねています。
+「今日も無事に定時で帰れ。」架空の日勤病棟で、患者・チーム・時間・自分の状態をやりくりする風刺系お仕事RPGです。勤務は8:30開始、定時は17:15です。正式コンテンツは `assets/content/events_phase3.json` の **50イベント**で、1勤務には状態・時間帯・重みに応じた一部だけが現れます。検証専用の `fixture_events.json` は正式件数に含めず、アプリからも読み込みません。
 
-## 環境と起動
+## 起動・テスト
 
-- 採用: Flutter stable 3.47.4、Dart 3.13.3。Windows上で作成。Android先行。
-- SDKはこの開発機では `C:\tools\flutter` にあります。PATHにない場合は下記をフルパスで実行します。
+この開発機のFlutter SDKは `C:\tools\flutter` です。プロジェクト直下で実行します。
 
 ```powershell
 & C:\tools\flutter\bin\flutter.bat pub get
 & C:\tools\flutter\bin\flutter.bat run
+& C:\tools\flutter\bin\flutter.bat test --no-test-assets test/domain test/content test/application test/ui test/phase3
 & C:\tools\flutter\bin\flutter.bat analyze
-& C:\tools\flutter\bin\flutter.bat test --no-test-assets test/domain test/content test/application test/ui
+```
+
+Phase 1は `test/domain` と `test/content`、Phase 2は `test/application` と `test/ui`、Phase 3は `test/phase3` です。OneDrive配下で既存の `build/unit_test_assets` がロックされることがあるため、ファイルを直接読むテストには `--no-test-assets` を使用します。
+
+## validator・simulation・seed再現
+
+```powershell
+& C:\tools\flutter\bin\dart.bat run bin/phase3.dart validate
+& C:\tools\flutter\bin\dart.bat run bin/phase3.dart simulate 5000 1
+& C:\tools\flutter\bin\dart.bat run bin/phase3.dart replay 17 test/phase3/on_time_seed17.json
+```
+
+`validate` は既存の `ContentLoader` で必須フィールド、ID重複、enum、条件、weight、3〜4択、outcome、時間、残務操作などを検査し、正式版に追加で50件と30分以内の所要時間を確認します。JSON Schemaは `assets/content/*.schema.json` にあります。`tools/generate_events.py` は正式JSONの編集元です。編集後は `python tools/generate_events.py` で再生成し、validatorを実行します。
+
+`simulate` は第2引数が件数、第3引数が開始seedです。4つの機械的な選択方針を均等に使い、定時・残業・応援終了、方針別件数、到達イベント数、fallback連続回数を出します。これは人間の定時率の推定値ではありません。定時率を直接操作する抽選・救済補正はありません。
+
+`replay` はseedと、`eventInstanceId:choiceId:outcomeId` の配列を含むJSONを受け取り、確定outcomeまで照合します。保存済みのseed 17は、正規の勤務進行と選択だけで17:15、残務0、最終申し送り完了になるQAケースです。Phase 1の旧 `bin/headless.dart` と479分のfixtureは境界検証専用です。
+
+## Phase 3の設計判断
+
+- 22の提示枠で50件のプールから重み付き抽選します。時間帯、状態条件、既出ID、重大イベント制限を使います。同一イベントは1勤務で再発しません。13件は選択後の結果にも重み付き分岐があります。
+- 記録・調整・ケアの3系統の残務を保ちます。完了・引継ぎ・休憩・トイレ・自然消耗はPhase 1のpure engineが処理します。候補が尽きた場合は常設fallbackを使い、simulationは連続回数を報告します。
+- 結果は選択command時に一度確定し、eventInstanceIdとともにGameStateへ保存します。「次へ」で再抽選しません。
+- 17:15に残務0と最終申し送り完了の時だけ定時です。17:16以降の通常終了は残業です。上限に達した未完了勤務は応援終了です。
+- 5000勤務の機械方針混合結果は定時764（15.28%）、残業3421（68.42%）、応援終了815（16.30%）。全50件に到達し、fallback連続は0でした。方針別結果は `simulate` で確認できます。選択方針の混合比は任意であり、人間のプレイ結果とは分けて扱います。
+- 320dp・文字倍率1.5で長文本文、長い選択肢、長い結果文をスクロール・操作するwidget testを追加しました。
+
+## debug APK
+
+```powershell
 & C:\tools\flutter\bin\flutter.bat build apk --debug
 ```
 
-Androidの仮開発用applicationIdは `dev.kangoshiquest.kangoshi_quest`。正式ID、署名、Git remoteは未指定です。公開前に所有者が確定してください。外部アカウントやリポジトリは作成していません。
+通常の出力先は `build/app/outputs/flutter-apk/app-debug.apk` です。OneDriveがGradle中間ファイルをロックする場合、同一Git HEADのソースを一時ディレクトリへコピーしてビルドし、HEADを記録して `artifacts/app-debug-phase3.apk` へコピーします。既存buildやソースを強制削除しません。
 
-debug APK は通常 `build/app/outputs/flutter-apk/app-debug.apk` に出力されます。Phase 2 最終版は OneDrive が既存の Gradle 中間ファイルをロックしたため、一時ディレクトリの同一ソースからビルドし、`artifacts/app-debug-phase2.apk` にコピーしました。正式署名と公開設定はありません。
+## 未実装・実機QA
 
-## Phase 2 の画面と操作
-
-- ホーム: 勤務開始、進行中勤務の再開、遊び方。新規開始で進行中の勤務を置き換える場合は確認します。
-- 遊び方: 架空の日勤病棟の説明、競合する状態、読む間はゲーム内時間が止まることを表示します。
-- ゲーム: 時刻・定時・残り時間、2×2の4ゲージ、残務内訳、コール数、イベント本文、選択肢を縦スクロールで表示します。
-- 行動結果: 確定結果文と行動前後の実測差分を同じ画面に表示し、「次へ」でのみ進みます。
-- 終業処理カード: domain が提示する記録・調整・ケア、合意引継ぎ相談、最終申し送りを選べます。終了時は簡易表示です。
-
-ゲーム中に戻ると中断確認を表示します。ホームへ戻っても同一アプリ起動中は「勤務のつづき」で再開できます。
-
-## controller と保存
-
-`lib/application/game_controller.dart` の `GameController` が domain command を発行し、返された `GameState` をそのまま公開します。時刻・ゲージ・タスク・乱数の更新は domain に委ねています。結果の差分は選択前後の状態から表示専用の `OutcomeView` に記録します。二重選択と「次へ」の重複を phase と eventInstanceId で拒否します。
-
-`ShiftStore` は保存インターフェース、`MemoryShiftStore` はメモリ実装です。状態と行動結果の表示用差分を遷移ごとに保存しますが、アプリプロセス終了時には消えます。実ファイル保存や保存プラグインは Phase 2 では扱いません。
-
-## headless再現
-
-プロジェクト直下で実行します。第1引数がseed、第2引数がカンマ区切りの選択IDです。引数なしは定時例です。
-
-```powershell
-& C:\tools\flutter\bin\dart.bat run bin/headless.dart
-& C:\tools\flutter\bin\dart.bat run bin/headless.dart 42 focused,quick,slow,short
-& C:\tools\flutter\bin\dart.bat run bin/headless.dart 42 overrun
-```
-
-- `focused,quick,quick,short`: 17:15通常退勤。
-- `focused,quick,slow,short`: 17:21通常退勤、6分残業。
-- `overrun`: 20:30途中上限、応援終了。通常の枝効果は不適用。
-
-fixtureの朝の479分行動は、22枠の飛越や退勤境界を少数イベントで再現するための検証専用データです。正式な遊びのテンポを表すものではありません。
-
-## 構造
-
-- `lib/domain/models.dart`: 不変状態、イベント・効果・評価・設定のモデル、JSON往復。
-- `lib/domain/engine.dart`: command + state → transition。時刻、抽選、消耗、残務、退勤、称号。FlutterとI/Oに依存しません。
-- `lib/content/content_loader.dart`: JSONの厳格検証。失敗時はファイル種別、JSONパス、eventIdを返します。呼び出し側が読み込んだ文字列を渡します。
-- `lib/application/game_controller.dart`: domain と画面の橋渡し、メモリ保存。
-- `lib/ui/quest_app.dart`: ホーム、遊び方、ゲーム、行動結果、終業処理。
-- `assets/content/*.schema.json`: イベント、調整値、称号の機械可読JSON Schema。複数フィールド間の制約、一意性、最低処理時間はローダーで追加検証します。
-- `assets/content/balance_v1.json`、`titles_v1.json`、`fixture_events.json`: 調整値、称号、3件の検証イベント。
-- `bin/headless.dart`: 固定seed・選択列の再現。
-- `test/domain`、`test/content`: ゲーム規則と不正JSONのテスト。
-- `test/application`、`test/ui`: 二重操作、保存、戻る確認、通し操作、320dp・文字拡大。
-
-## 判断と未検証
-
-- 17:00は最後の提示枠です。16:52から進むと17:00のイベントを提示し、その選択が終わって終業処理へ入ります。行動そのものが17:00に達した場合はその枠を通過したものとして終業処理へ入れます。
-- 17:15前に申し送りを終えた待機時間にも自然消耗を適用します。仕様の「全経過分」に従うためです。
-- `reviewNote`は開発用メモとして検証時に許可しますが、モデルとゲーム状態には保持しません。画面には出しません。
-- fixtureのみで正式50イベント、実プレイ時間、定時率15〜20%は検証できません。Phase 3のデータ投入後に計測が必要です。
-- Android cmdline-tools は公式配布 ZIP の SHA-256 を照合して SDK に追加済みです。debug APK はビルド済みです。`flutter doctor` は未受諾の Android ライセンスを報告します。Android実機での文字拡大・操作感、iOS、正式署名は未検証です。
-- このOneDrive配下ではFlutterが既存の `build/unit_test_assets` を削除できない場合があります。対象テストはファイルを直接読むため、`--no-test-assets` で実行できます。
-- fixture の 479 分行動は勤務境界テスト専用です。通常のテンポや完成コンテンツではありません。
-- Phase 3 で正式イベントを入れるまでは選択肢の幅や長文を追加コンテンツで再検証してください。完成版結果画面、称号コレクション、共有、累計、永続保存、分析は未実装です。
+完成版結果画面、記録帳UI、永続保存、SNS共有、本番共有カードは後続Phaseです。現在の勤務保存は同一プロセス内のメモリのみです。Android実機では、320dp相当と大きな文字、長文スクロール、選択ボタン、戻る・中断確認、画面回転・アプリ再開、長時間プレイの操作感を確認してください。実機確認と人間プレイのバランス計測は未実施です。βテストで定時率と、丁寧・時間優先を選んだ際の残務増加、重大イベントの重み、休憩の取りやすさを再調整します。

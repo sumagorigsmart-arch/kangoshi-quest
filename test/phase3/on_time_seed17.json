@@ -1,0 +1,14 @@
+{
+  "contentVersion": "official_phase3_v1",
+  "seed": 17,
+  "choiceHistory": [
+    "qa-1:share:expected", "qa-2:share:expected", "qa-3:share:expected",
+    "qa-4:share:expected", "qa-5:share:expected", "qa-6:share:expected",
+    "qa-7:share:expected", "qa-8:share:expected", "qa-9:share:expected",
+    "qa-10:share:expected", "qa-11:share:expected", "qa-12:share:expected",
+    "qa-13:share:expected", "qa-14:share:expected", "qa-15:share:expected",
+    "qa-16:share:expected", "qa-17:share:expected", "qa-18:share:expected",
+    "qa-19:share:expected", "qa-20:share:expected", "qa-21:share:expected",
+    "qa-22:share:expected", "qa-23:short:short_done"
+  ]
+}
