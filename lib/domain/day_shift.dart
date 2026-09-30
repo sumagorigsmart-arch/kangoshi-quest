@@ -19,6 +19,186 @@ enum WorkPriority { urgent, high, normal, low }
 
 enum DeadlineState { comfortable, approaching, overdue }
 
+enum PatientSeverity { stable, watch, high }
+
+enum AdlLevel { independent, partialAssist, fullAssist }
+
+class Patient {
+  final String patientId, bedLabel;
+  final PatientSeverity severity;
+  final AdlLevel adl;
+  final bool hasInfusion,
+      hasExamination,
+      hasScheduledMedication,
+      needsToileting,
+      needsMealAssistance;
+  const Patient({
+    required this.patientId,
+    required this.bedLabel,
+    required this.severity,
+    required this.adl,
+    required this.hasInfusion,
+    required this.hasExamination,
+    required this.hasScheduledMedication,
+    required this.needsToileting,
+    required this.needsMealAssistance,
+  });
+  Patient copyWith({PatientSeverity? severity}) => Patient(
+    patientId: patientId,
+    bedLabel: bedLabel,
+    severity: severity ?? this.severity,
+    adl: adl,
+    hasInfusion: hasInfusion,
+    hasExamination: hasExamination,
+    hasScheduledMedication: hasScheduledMedication,
+    needsToileting: needsToileting,
+    needsMealAssistance: needsMealAssistance,
+  );
+  factory Patient.fromJson(dynamic raw) {
+    final m = Map<String, dynamic>.from(raw as Map);
+    return Patient(
+      patientId: m['patientId'] as String,
+      bedLabel: m['bedLabel'] as String,
+      severity: PatientSeverity.values.byName(m['severity'] as String),
+      adl: AdlLevel.values.byName(m['adl'] as String),
+      hasInfusion: m['hasInfusion'] as bool,
+      hasExamination: m['hasExamination'] as bool,
+      hasScheduledMedication: m['hasScheduledMedication'] as bool,
+      needsToileting: m['needsToileting'] as bool,
+      needsMealAssistance: m['needsMealAssistance'] as bool,
+    );
+  }
+  Map<String, dynamic> toJson() => {
+    'patientId': patientId,
+    'bedLabel': bedLabel,
+    'severity': severity.name,
+    'adl': adl.name,
+    'hasInfusion': hasInfusion,
+    'hasExamination': hasExamination,
+    'hasScheduledMedication': hasScheduledMedication,
+    'needsToileting': needsToileting,
+    'needsMealAssistance': needsMealAssistance,
+  };
+}
+
+List<Patient> generatePatients() => const [
+  Patient(
+    patientId: 'p301a',
+    bedLabel: '301-A',
+    severity: PatientSeverity.stable,
+    adl: AdlLevel.independent,
+    hasInfusion: false,
+    hasExamination: false,
+    hasScheduledMedication: true,
+    needsToileting: false,
+    needsMealAssistance: false,
+  ),
+  Patient(
+    patientId: 'p301b',
+    bedLabel: '301-B',
+    severity: PatientSeverity.watch,
+    adl: AdlLevel.partialAssist,
+    hasInfusion: true,
+    hasExamination: false,
+    hasScheduledMedication: true,
+    needsToileting: true,
+    needsMealAssistance: false,
+  ),
+  Patient(
+    patientId: 'p302a',
+    bedLabel: '302-A',
+    severity: PatientSeverity.high,
+    adl: AdlLevel.fullAssist,
+    hasInfusion: true,
+    hasExamination: true,
+    hasScheduledMedication: true,
+    needsToileting: true,
+    needsMealAssistance: true,
+  ),
+  Patient(
+    patientId: 'p303b',
+    bedLabel: '303-B',
+    severity: PatientSeverity.watch,
+    adl: AdlLevel.partialAssist,
+    hasInfusion: false,
+    hasExamination: true,
+    hasScheduledMedication: false,
+    needsToileting: true,
+    needsMealAssistance: true,
+  ),
+  Patient(
+    patientId: 'p304a',
+    bedLabel: '304-A',
+    severity: PatientSeverity.stable,
+    adl: AdlLevel.independent,
+    hasInfusion: true,
+    hasExamination: false,
+    hasScheduledMedication: true,
+    needsToileting: false,
+    needsMealAssistance: false,
+  ),
+  Patient(
+    patientId: 'p304b',
+    bedLabel: '304-B',
+    severity: PatientSeverity.watch,
+    adl: AdlLevel.fullAssist,
+    hasInfusion: false,
+    hasExamination: false,
+    hasScheduledMedication: true,
+    needsToileting: true,
+    needsMealAssistance: true,
+  ),
+];
+
+class UnifiedShiftState {
+  final List<Patient> patients;
+  final int interruptSerial, lastInterruptAt;
+  final String? activeTaskId;
+  final int activeTaskRemaining;
+  const UnifiedShiftState({
+    required this.patients,
+    this.interruptSerial = 0,
+    this.lastInterruptAt = 510,
+    this.activeTaskId,
+    this.activeTaskRemaining = 0,
+  });
+  UnifiedShiftState copyWith({
+    List<Patient>? patients,
+    int? interruptSerial,
+    int? lastInterruptAt,
+    String? activeTaskId,
+    int? activeTaskRemaining,
+    bool clearActive = false,
+  }) => UnifiedShiftState(
+    patients: patients ?? this.patients,
+    interruptSerial: interruptSerial ?? this.interruptSerial,
+    lastInterruptAt: lastInterruptAt ?? this.lastInterruptAt,
+    activeTaskId: clearActive ? null : activeTaskId ?? this.activeTaskId,
+    activeTaskRemaining: clearActive
+        ? 0
+        : activeTaskRemaining ?? this.activeTaskRemaining,
+  );
+  factory UnifiedShiftState.fromJson(dynamic raw) {
+    final m = Map<String, dynamic>.from(raw as Map);
+    return UnifiedShiftState(
+      patients: List.unmodifiable(
+        (m['patients'] as List).map(Patient.fromJson),
+      ),
+      interruptSerial: m['interruptSerial'] as int? ?? 0,
+      lastInterruptAt: m['lastInterruptAt'] as int? ?? 510,
+      activeTaskId: m['activeTaskId'] as String?,
+      activeTaskRemaining: m['activeTaskRemaining'] as int? ?? 0,
+    );
+  }
+  Map<String, dynamic> toJson() => {
+    'patients': patients.map((p) => p.toJson()).toList(),
+    'interruptSerial': interruptSerial,
+    'lastInterruptAt': lastInterruptAt,
+    'activeTaskId': activeTaskId,
+    'activeTaskRemaining': activeTaskRemaining,
+  };
+}
+
 class DayShiftConfig {
   final int lunchStart, afternoonStart, handoffStart, handoffEnd, finish;
   const DayShiftConfig({
@@ -69,6 +249,7 @@ class WorkTask {
   final WorkTaskType taskType;
   final String? sourceEventId, patientId, parentTaskId, routineCategory;
   final ShiftPhase? shiftPhase;
+  final bool requiredToLeave;
   const WorkTask({
     required this.taskId,
     required this.title,
@@ -85,13 +266,18 @@ class WorkTask {
     this.parentTaskId,
     this.routineCategory,
     this.shiftPhase,
+    this.requiredToLeave = true,
   });
-  WorkTask copyWith({WorkTaskStatus? status}) => WorkTask(
+  WorkTask copyWith({
+    WorkTaskStatus? status,
+    int? deadline,
+    int? scheduledAt,
+  }) => WorkTask(
     taskId: taskId,
     title: title,
     createdAt: createdAt,
-    scheduledAt: scheduledAt,
-    deadline: deadline,
+    scheduledAt: scheduledAt ?? this.scheduledAt,
+    deadline: deadline ?? this.deadline,
     estimatedMinutes: estimatedMinutes,
     priority: priority,
     status: status ?? this.status,
@@ -102,6 +288,7 @@ class WorkTask {
     parentTaskId: parentTaskId,
     routineCategory: routineCategory,
     shiftPhase: shiftPhase,
+    requiredToLeave: requiredToLeave,
   );
   factory WorkTask.fromJson(dynamic raw) {
     final m = Map<String, dynamic>.from(raw as Map);
@@ -123,6 +310,7 @@ class WorkTask {
       shiftPhase: m['shiftPhase'] == null
           ? null
           : ShiftPhase.values.byName(m['shiftPhase'] as String),
+      requiredToLeave: m['requiredToLeave'] as bool? ?? true,
     );
   }
   Map<String, dynamic> toJson() => {
@@ -141,7 +329,12 @@ class WorkTask {
     'parentTaskId': parentTaskId,
     'routineCategory': routineCategory,
     'shiftPhase': shiftPhase?.name,
+    'requiredToLeave': requiredToLeave,
   };
+  int unrecordedMinutes(int now) =>
+      taskType == WorkTaskType.documentation && status == WorkTaskStatus.pending
+      ? (now - createdAt).clamp(0, 99999)
+      : 0;
 }
 
 DeadlineState deadlineState(WorkTask task, int now, {int warningMinutes = 20}) {
@@ -163,6 +356,8 @@ class TaskQueue {
       TaskQueue((raw as List).map(WorkTask.fromJson));
   List<Map<String, dynamic>> toJson() => tasks.map((t) => t.toJson()).toList();
   TaskQueue add(WorkTask task) => TaskQueue([...tasks, task]);
+  TaskQueue replace(WorkTask task) =>
+      TaskQueue(tasks.map((t) => t.taskId == task.taskId ? task : t));
   List<WorkTask> get pending =>
       _sorted(tasks.where((t) => t.status == WorkTaskStatus.pending));
   List<WorkTask> get completed =>
@@ -215,6 +410,7 @@ class TaskQueue {
           parentTaskId: id,
           sourceEventId: task.sourceEventId,
           patientId: task.patientId,
+          deadline: now + 120,
         ),
       );
     }
@@ -296,6 +492,234 @@ TaskQueue generateRoutineTasks({
   );
 }
 
+TaskQueue generatePatientRoutineTasks(
+  List<Patient> patients, {
+  DayShiftConfig config = const DayShiftConfig(),
+}) {
+  final tasks = <WorkTask>[];
+  void add(
+    String id,
+    String title,
+    int at,
+    int duration,
+    ShiftPhase phase, {
+    Patient? patient,
+    int documentation = 0,
+    WorkPriority priority = WorkPriority.normal,
+    int? deadline,
+    bool requiredToLeave = true,
+  }) {
+    tasks.add(
+      WorkTask(
+        taskId: id,
+        title: patient == null ? title : '${patient.bedLabel} $title',
+        patientId: patient?.patientId,
+        createdAt: 510,
+        scheduledAt: at,
+        deadline: deadline,
+        estimatedMinutes: duration,
+        priority: priority,
+        taskType: WorkTaskType.routine,
+        routineCategory: id,
+        shiftPhase: phase,
+        documentationMinutes: documentation,
+        requiredToLeave: requiredToLeave,
+      ),
+    );
+  }
+
+  add(
+    'morning_handoff',
+    '朝の申し送り',
+    510,
+    20,
+    ShiftPhase.morningHandoff,
+    deadline: 530,
+  );
+  for (var i = 0; i < patients.length; i++) {
+    final p = patients[i];
+    add(
+      '${p.patientId}-am-vitals',
+      '午前検温',
+      530 + i * 7,
+      6,
+      ShiftPhase.morningCare,
+      patient: p,
+      documentation: 2,
+      priority: p.severity == PatientSeverity.high
+          ? WorkPriority.high
+          : WorkPriority.normal,
+      deadline: 660,
+    );
+    if (p.hasInfusion) {
+      add(
+        '${p.patientId}-iv-check',
+        '点滴確認',
+        575 + i * 9,
+        5,
+        ShiftPhase.morningCare,
+        patient: p,
+        documentation: 2,
+        deadline: 690,
+      );
+    }
+    if (p.needsToileting) {
+      add(
+        '${p.patientId}-am-toilet',
+        '排泄介助',
+        590 + i * 8,
+        9,
+        ShiftPhase.morningCare,
+        patient: p,
+        documentation: 2,
+      );
+    }
+    if (p.adl != AdlLevel.independent) {
+      add(
+        '${p.patientId}-hygiene',
+        '清潔ケア',
+        615 + i * 8,
+        12,
+        ShiftPhase.morningCare,
+        patient: p,
+        documentation: 3,
+      );
+    }
+    if (p.hasScheduledMedication) {
+      add(
+        '${p.patientId}-am-meds',
+        '午前内服',
+        640 + i * 5,
+        4,
+        ShiftPhase.morningCare,
+        patient: p,
+        documentation: 2,
+        deadline: 720,
+      );
+      add(
+        '${p.patientId}-lunch-meds',
+        '昼の内服',
+        config.lunchStart + 25 + i * 3,
+        4,
+        ShiftPhase.lunchCare,
+        patient: p,
+        documentation: 2,
+      );
+    }
+    if (p.hasExamination) {
+      add(
+        '${p.patientId}-exam',
+        '検査対応',
+        650 + i * 15,
+        15,
+        ShiftPhase.morningCare,
+        patient: p,
+        documentation: 3,
+        priority: WorkPriority.high,
+        deadline: 750,
+      );
+    }
+    if (p.needsMealAssistance) {
+      add(
+        '${p.patientId}-meal',
+        '食事介助',
+        config.lunchStart + 10 + i * 5,
+        18,
+        ShiftPhase.lunchCare,
+        patient: p,
+        documentation: 3,
+      );
+    }
+    add(
+      '${p.patientId}-pm-vitals',
+      '午後検温',
+      config.afternoonStart + i * 9,
+      6,
+      ShiftPhase.afternoonCare,
+      patient: p,
+      documentation: 2,
+      deadline: 930,
+    );
+    if (p.needsToileting) {
+      add(
+        '${p.patientId}-pm-toilet',
+        '午後の排泄介助',
+        config.afternoonStart + 45 + i * 8,
+        9,
+        ShiftPhase.afternoonCare,
+        patient: p,
+        documentation: 2,
+      );
+    }
+  }
+  add('orders', '指示受け・確認', 620, 10, ShiftPhase.morningCare);
+  add(
+    'doctor_assist',
+    '医師処置の介助',
+    680,
+    15,
+    ShiftPhase.morningCare,
+    documentation: 3,
+  );
+  add('lunch_serve', '昼食の配膳', config.lunchStart, 10, ShiftPhase.lunchCare);
+  add('lunch_clear', '下膳', config.lunchStart + 55, 10, ShiftPhase.lunchCare);
+  add(
+    'break',
+    '休憩',
+    config.lunchStart + 65,
+    30,
+    ShiftPhase.breakTime,
+    requiredToLeave: false,
+  );
+  add(
+    'afternoon_handoff',
+    '午後の申し送り',
+    config.handoffStart,
+    20,
+    ShiftPhase.afternoonHandoff,
+    deadline: config.handoffEnd,
+  );
+  return TaskQueue(tasks);
+}
+
+class ShiftWorkStatus {
+  final bool scheduledEndReached, canLeave;
+  final int overtimeMinutes,
+      unfinishedTaskCount,
+      unfinishedRecordCount,
+      overdueCount,
+      urgentCount;
+  const ShiftWorkStatus(
+    this.scheduledEndReached,
+    this.canLeave,
+    this.overtimeMinutes,
+    this.unfinishedTaskCount,
+    this.unfinishedRecordCount,
+    this.overdueCount,
+    this.urgentCount,
+  );
+  factory ShiftWorkStatus.from(
+    TaskQueue queue,
+    int now, {
+    DayShiftConfig config = const DayShiftConfig(),
+  }) {
+    final pending = queue.pending;
+    final end = now >= config.finish;
+    return ShiftWorkStatus(
+      end,
+      end &&
+          !pending.any(
+            (t) => t.requiredToLeave || t.priority == WorkPriority.urgent,
+          ),
+      (now - config.finish).clamp(0, 99999),
+      pending.length,
+      queue.documentationCount,
+      queue.overdue(now).length,
+      queue.urgent.length,
+    );
+  }
+}
+
 WorkTask infusionTask(String id, int at) => WorkTask(
   taskId: id,
   title: '点滴交換',
@@ -353,6 +777,22 @@ List<WorkTask> availableTasks(
   return queue.pending.where((task) {
     if (task.taskType != WorkTaskType.routine) {
       return task.scheduledAt == null || task.scheduledAt! <= now;
+    }
+    if (task.patientId != null) {
+      return now >= (task.scheduledAt ?? 510) &&
+          (queue.tasks
+                  .firstWhere((t) => t.taskId == 'morning_handoff')
+                  .status ==
+              WorkTaskStatus.completed);
+    }
+    if (queue.tasks.any((t) => t.patientId != null)) {
+      if (task.taskId == 'morning_handoff') return true;
+      if (task.taskId == 'break') {
+        return now >= (task.scheduledAt ?? 0) &&
+            queue.tasks.firstWhere((t) => t.taskId == 'lunch_clear').status ==
+                WorkTaskStatus.completed;
+      }
+      return now >= (task.scheduledAt ?? 510);
     }
     if (task.taskId == 'afternoon_handoff' && now >= config.handoffStart) {
       return true;

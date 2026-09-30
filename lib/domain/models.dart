@@ -143,10 +143,24 @@ class Condition {
       'scores.patient' => s.scores['patient']!,
       'scores.team' => s.scores['team']!,
       'scores.risk' => s.scores['risk']!,
-      'tasks.record' => s.tasks.record,
-      'tasks.coordination' => s.tasks.coordination,
-      'tasks.care' => s.tasks.care,
-      'tasks.total' => s.tasks.total,
+      'tasks.record' =>
+        s.unifiedShift == null
+            ? s.tasks.record
+            : s.workQueue!.documentationCount,
+      'tasks.coordination' =>
+        s.unifiedShift == null
+            ? s.tasks.coordination
+            : s.workQueue!.pending
+                  .where((t) => t.taskType == WorkTaskType.dynamic)
+                  .length,
+      'tasks.care' =>
+        s.unifiedShift == null
+            ? s.tasks.care
+            : s.workQueue!.pending
+                  .where((t) => t.taskType == WorkTaskType.routine)
+                  .length,
+      'tasks.total' =>
+        s.unifiedShift == null ? s.tasks.total : s.workQueue!.pendingCount,
       'counters.breakMinutes' => s.counters.breakMinutes,
       'flags.hasRested' => s.flags['hasRested'] ?? false,
       'flags.teamSupport' => s.flags['teamSupport'] ?? false,
@@ -514,6 +528,10 @@ class GameResult {
 
 class GameState {
   final TaskQueue? workQueue;
+  final UnifiedShiftState? unifiedShift;
+  ShiftWorkStatus? get workStatus => workQueue == null || unifiedShift == null
+      ? null
+      : ShiftWorkStatus.from(workQueue!, timeMinutes);
   ShiftPhase? get shiftPhase {
     final queue = workQueue;
     if (queue == null) return null;
@@ -579,6 +597,7 @@ class GameState {
     required this.handoverDone,
     this.result,
     this.workQueue,
+    this.unifiedShift,
   }) : meters = UnmodifiableMapView(Map.of(meters)),
        scores = UnmodifiableMapView(Map.of(scores)),
        flags = UnmodifiableMapView(Map.of(flags)),
@@ -646,6 +665,7 @@ class GameState {
     bool? handoverDone,
     GameResult? result,
     TaskQueue? workQueue,
+    UnifiedShiftState? unifiedShift,
     bool clearCurrent = false,
   }) => GameState(
     runId: runId,
@@ -683,6 +703,7 @@ class GameState {
     handoverDone: handoverDone ?? this.handoverDone,
     result: result ?? this.result,
     workQueue: workQueue ?? this.workQueue,
+    unifiedShift: unifiedShift ?? this.unifiedShift,
   );
   factory GameState.fromJson(dynamic value) {
     final m = object(value);
@@ -722,6 +743,9 @@ class GameState {
       workQueue: m['workQueue'] == null
           ? null
           : TaskQueue.fromJson(m['workQueue']),
+      unifiedShift: m['unifiedShift'] == null
+          ? null
+          : UnifiedShiftState.fromJson(m['unifiedShift']),
     );
   }
   Map<String, dynamic> toJson() => {
@@ -756,6 +780,9 @@ class GameState {
     'handoverDone': handoverDone,
     'result': result?.toJson(),
     'workQueue': workQueue?.toJson(),
+    'unifiedShift': unifiedShift?.toJson(),
+    'scheduledEndReached': workStatus?.scheduledEndReached,
+    'overtimeMinutes': workStatus?.overtimeMinutes,
     'shiftPhase': shiftPhase?.name,
   };
 }

@@ -203,7 +203,7 @@ class _QuestAppState extends State<QuestApp> {
               const SizedBox(height: 28),
               _panel(
                 child: const Text(
-                  '病棟の出来事に選択肢で対応し、定時退勤を目指すお仕事RPG。\n1勤務は数分から。',
+                  '患者別の予定業務と割り込みをさばき、定時退勤を目指すお仕事RPG。\n1勤務は数分から。',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -273,9 +273,7 @@ class _QuestAppState extends State<QuestApp> {
       children: const [
         Text('架空の日勤病棟を題材にした、風刺的なお仕事RPGです。'),
         SizedBox(height: 16),
-        Text(
-          '患者対応、チームとの関係、自分の体力やメンタル、残務が競合します。選択を重ね、終業時には記録・調整・ケアを処理して申し送りします。',
-        ),
+        Text('患者ごとの予定業務と割り込みを優先順位をつけて処理します。ケアを終えると記録が増え、17:00に残った仕事は残業で処理します。'),
         SizedBox(height: 16),
         Text('イベントを読む時間やアプリを閉じている時間では、ゲーム内時刻は進みません。選択と「次へ」で進みます。'),
       ],
@@ -285,6 +283,7 @@ class _QuestAppState extends State<QuestApp> {
   Widget _game() {
     final s = widget.controller.state;
     if (s == null) return const Center(child: Text('勤務がありません'));
+    if (s.unifiedShift != null) return _unifiedGame(s);
     final finish = s.workQueue == null
         ? widget.controller.content.balance.plannedFinish
         : 1020;
@@ -389,6 +388,187 @@ class _QuestAppState extends State<QuestApp> {
               Text(
                 '累計ナースコール ${s.counters.callCount}件',
                 style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _unifiedGame(GameState s) {
+    final queue = s.workQueue!;
+    final status = s.workStatus!;
+    final available = availableTasks(queue, s.timeMinutes);
+    final next =
+        queue.pending
+            .where(
+              (t) =>
+                  t.taskType == WorkTaskType.routine &&
+                  t.scheduledAt != null &&
+                  t.scheduledAt! > s.timeMinutes,
+            )
+            .toList()
+          ..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
+    final pending = queue.pending;
+    return SafeArea(
+      child: _pageFrame(
+        child: SingleChildScrollView(
+          key: const Key('unifiedGameScroll'),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      gameTime(s.timeMinutes),
+                      key: const Key('unifiedClock'),
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(color: QuestColors.teal),
+                    ),
+                    Text(
+                      phaseLabel(s.shiftPhase!),
+                      key: const Key('unifiedPhase'),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      status.scheduledEndReached
+                          ? '定時到達　残業 ${status.overtimeMinutes}分'
+                          : '17:00まで ${1020 - s.timeMinutes}分',
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          '未処理 ${status.unfinishedTaskCount}',
+                          key: const Key('unifiedPending'),
+                        ),
+                        Text(
+                          '期限超過 ${status.overdueCount}',
+                          key: const Key('unifiedOverdue'),
+                        ),
+                        Text(
+                          '未記録 ${status.unfinishedRecordCount}',
+                          key: const Key('unifiedRecords'),
+                        ),
+                        Text(
+                          '緊急 ${status.urgentCount}',
+                          key: const Key('unifiedUrgent'),
+                        ),
+                      ],
+                    ),
+                    if (s.unifiedShift!.activeTaskId != null)
+                      Text(
+                        '中断中：${queue.tasks.firstWhere((t) => t.taskId == s.unifiedShift!.activeTaskId).title}　残り${s.unifiedShift!.activeTaskRemaining}分',
+                        key: const Key('activeTask'),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (s.phase == 'awaitingChoice') ...[
+                _event(s),
+                const SizedBox(height: 12),
+              ] else if (s.phase == 'showingOutcome') ...[
+                _panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '行動結果',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(s.outcomeText ?? '対応を終えました'),
+                      Text(
+                        '経過時間 ${widget.controller.outcomeView?.elapsedMinutes ?? 0}分',
+                      ),
+                      Text(
+                        '現在の未処理 ${queue.pendingCount}件・未記録 ${queue.documentationCount}件',
+                      ),
+                      FilledButton(
+                        key: const Key('next'),
+                        onPressed: widget.controller.next,
+                        child: const Text('次へ'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Text('今処理するTask', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 6),
+              if (available.isEmpty) const Text('現在選べる業務はありません。次の予定を確認してください。'),
+              for (final task in available)
+                Card(
+                  child: ListTile(
+                    key: Key('unified-${task.taskId}'),
+                    leading: task.patientId == null
+                        ? const Icon(Icons.assignment_outlined)
+                        : SizedBox(
+                            width: 62,
+                            child: Center(
+                              child: Text(
+                                s.unifiedShift!.patients
+                                    .firstWhere(
+                                      (p) => p.patientId == task.patientId,
+                                    )
+                                    .bedLabel,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                    title: Text(
+                      task.patientId == null
+                          ? task.title
+                          : task.title.split(' ').skip(1).join(' '),
+                    ),
+                    subtitle: Text(
+                      '${task.estimatedMinutes}分・${task.priority.name}'
+                      '${task.deadline == null ? '' : '・期限 ${gameTime(task.deadline!)}'}'
+                      '${deadlineState(task, s.timeMinutes) == DeadlineState.overdue ? '・超過' : ''}'
+                      '${task.taskType == WorkTaskType.documentation ? '・未記録${task.unrecordedMinutes(s.timeMinutes)}分' : ''}',
+                    ),
+                    trailing: IconButton(
+                      tooltip: '${task.title}を処理',
+                      icon: const Icon(Icons.play_arrow),
+                      onPressed: s.phase == 'taskSelection'
+                          ? () =>
+                                widget.controller.completeWorkTask(task.taskId)
+                          : null,
+                    ),
+                  ),
+                ),
+              if (pending.isNotEmpty && s.phase == 'taskSelection')
+                TextButton(
+                  key: const Key('unifiedLater'),
+                  onPressed: () => widget.controller.advanceWorkClock(5),
+                  child: const Text('あとでやる（5分進める）'),
+                ),
+              const SizedBox(height: 12),
+              Text('次の予定業務', style: Theme.of(context).textTheme.titleLarge),
+              if (next.isEmpty) const Text('新しいRoutine Taskはありません'),
+              for (final task in next.take(6))
+                Text('${gameTime(task.scheduledAt!)}　${task.title}'),
+              if (next.length > 6) Text('ほか ${next.length - 6}件'),
+              if (status.scheduledEndReached &&
+                  status.canLeave &&
+                  s.phase == 'taskSelection')
+                FilledButton(
+                  key: const Key('leaveShift'),
+                  onPressed: widget.controller.finishUnifiedShift,
+                  child: const Text('勤務を終了する'),
+                ),
+              ExpansionTile(
+                title: const Text('体調・状態（補助情報）'),
+                children: [_meters(s)],
               ),
             ],
           ),
