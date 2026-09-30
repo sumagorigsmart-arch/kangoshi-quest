@@ -7,6 +7,7 @@ import 'application/shift_history.dart';
 import 'application/persistent_shift_store.dart';
 import 'content/content_loader.dart';
 import 'ui/quest_app.dart';
+import 'ui/quest_theme.dart';
 
 Future<GameController> loadGame() async {
   final preferences = SharedPreferencesAsync();
@@ -43,7 +44,7 @@ class _KangoshiQuestAppState extends State<KangoshiQuestApp> {
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: '看護師クエスト',
-    theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.teal),
+    theme: questTheme(),
     home: FutureBuilder<GameController>(
       future: _controller,
       builder: (context, snapshot) {

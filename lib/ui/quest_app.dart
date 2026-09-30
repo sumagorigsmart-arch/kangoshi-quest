@@ -8,6 +8,7 @@ import '../application/shift_history.dart';
 import '../application/shift_summary.dart';
 import '../domain/models.dart';
 import 'share_bridge.dart';
+import 'quest_theme.dart';
 
 String gameTime(int minutes) =>
     '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
@@ -44,6 +45,20 @@ class _QuestAppState extends State<QuestApp> {
 
   void _refresh() => setState(() {});
 
+  Widget _pageFrame({required Widget child}) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: QuestSpace.maxWidth),
+      child: child,
+    ),
+  );
+
+  Widget _panel({required Widget child, EdgeInsets? padding}) => Card(
+    child: Padding(
+      padding: padding ?? const EdgeInsets.all(QuestSpace.medium),
+      child: child,
+    ),
+  );
+
   Future<void> _start() async {
     if (widget.controller.hasActiveShift) {
       final replace = await showDialog<bool>(
@@ -58,7 +73,7 @@ class _QuestAppState extends State<QuestApp> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('新しい勤務を始める'),
+              child: const Text('最初からやり直す'),
             ),
           ],
         ),
@@ -158,27 +173,59 @@ class _QuestAppState extends State<QuestApp> {
   }
 
   Widget _home() => SafeArea(
-    child: Center(
+    child: _pageFrame(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
+          constraints: const BoxConstraints(maxWidth: QuestSpace.maxWidth),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const Icon(
+                Icons.medical_services_outlined,
+                size: 42,
+                color: QuestColors.teal,
+              ),
+              const SizedBox(height: 18),
               Text(
                 '看護師クエスト',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
-              const SizedBox(height: 12),
-              const Text('今日も無事に定時で帰れ。', textAlign: TextAlign.center),
-              const SizedBox(height: 32),
-              FilledButton(
-                onPressed: widget.controller.canStartNew ? _start : null,
-                child: const Text('勤務を始める'),
+              const SizedBox(height: 8),
+              Text(
+                '今日も無事に定時で帰れ。',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
+              const SizedBox(height: 28),
+              _panel(
+                child: const Text(
+                  'ナースコール、記録、入院、急変──\n次々起こる出来事を選択肢で乗り切り、定時退勤を目指すお仕事RPG。',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 24),
+              if (widget.controller.hasActiveShift) ...[
+                FilledButton.icon(
+                  onPressed: widget.controller.store.error == null
+                      ? () => setState(() => page = 'game')
+                      : null,
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('勤務を再開する'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: widget.controller.canStartNew ? _start : null,
+                  child: const Text('最初からやり直す'),
+                ),
+              ] else
+                FilledButton.icon(
+                  onPressed: widget.controller.canStartNew ? _start : null,
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('勤務をはじめる'),
+                ),
               if (widget.controller.store.error != null)
                 Text(
                   widget.controller.store.error!,
@@ -197,15 +244,6 @@ class _QuestAppState extends State<QuestApp> {
                   },
                   child: const Text('バックアップから復元'),
                 ),
-              if (widget.controller.hasActiveShift) ...[
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: widget.controller.store.error == null
-                      ? () => setState(() => page = 'game')
-                      : null,
-                  child: const Text('勤務のつづき'),
-                ),
-              ],
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => setState(() => page = 'how'),
@@ -221,11 +259,6 @@ class _QuestAppState extends State<QuestApp> {
                 child: const Text('勤務のふりかえり'),
               ),
               TextButton(onPressed: _deleteAll, child: const Text('すべての記録を削除')),
-              const SizedBox(height: 20),
-              const Text(
-                '正式イベント50件から、今日の勤務が始まります。',
-                textAlign: TextAlign.center,
-              ),
             ],
           ),
         ),
@@ -252,50 +285,91 @@ class _QuestAppState extends State<QuestApp> {
     final s = widget.controller.state;
     if (s == null) return const Center(child: Text('勤務がありません'));
     final finish = widget.controller.content.balance.plannedFinish;
+    final remaining = finish - s.timeMinutes;
+    final reached = remaining <= 0;
     return SafeArea(
-      child: ListView(
-        key: const Key('gameScroll'),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          Text(
-            'ゲーム内時刻 ${gameTime(s.timeMinutes)}　定時 17:15',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Text(
-            '残り時間 ${s.timeMinutes < finish ? '${finish - s.timeMinutes}分' : '0分（定時後）'}',
-          ),
-          const SizedBox(height: 12),
-          _meters(s),
-          const SizedBox(height: 8),
-          ExpansionTile(
-            key: const Key('tasks'),
-            tilePadding: EdgeInsets.zero,
-            title: Text(
-              '残務 ${s.tasks.total}件　記録 ${s.tasks.record}・調整 ${s.tasks.coordination}・ケア ${s.tasks.care}',
+      child: _pageFrame(
+        child: ListView(
+          key: const Key('gameScroll'),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          children: [
+            _panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'ゲーム内時刻　定時 17:15',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: Text(
+                      gameTime(s.timeMinutes),
+                      key: ValueKey(s.timeMinutes),
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            color: reached
+                                ? QuestColors.danger
+                                : QuestColors.teal,
+                          ),
+                    ),
+                  ),
+                  Text(
+                    reached
+                        ? '定時を過ぎました。残務を終えて退勤へ。'
+                        : remaining <= 60
+                        ? '定時まであと$remaining分'
+                        : '定時まであと$remaining分',
+                    style: TextStyle(
+                      color: reached ? QuestColors.danger : QuestColors.muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _meters(s),
+                ],
+              ),
             ),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  '記録 ${s.tasks.record}件　調整 ${s.tasks.coordination}件　ケア ${s.tasks.care}件',
+            const SizedBox(height: 12),
+            ExpansionTile(
+              key: const Key('tasks'),
+              tilePadding: EdgeInsets.zero,
+              title: Text('残務 ${s.tasks.total}件'),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    '記録 ${s.tasks.record}件　調整 ${s.tasks.coordination}件　ケア ${s.tasks.care}件',
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              '累計ナースコール ${s.counters.callCount}件',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (widget.controller.store.error != null)
+              Text(
+                widget.controller.store.error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            const SizedBox(height: 16),
+            if (s.phase == 'completed')
+              _completed(s)
+            else if (s.phase == 'showingOutcome')
+              _outcome(s)
+            else
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                transitionBuilder: (child, animation) =>
+                    FadeTransition(opacity: animation, child: child),
+                child: KeyedSubtree(
+                  key: ValueKey(s.eventInstanceId),
+                  child: _event(s),
                 ),
               ),
-            ],
-          ),
-          Text('累計ナースコール ${s.counters.callCount}件'),
-          if (widget.controller.store.error != null)
-            Text(
-              widget.controller.store.error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          const SizedBox(height: 20),
-          if (s.phase == 'completed')
-            _completed(s)
-          else if (s.phase == 'showingOutcome')
-            _outcome(s)
-          else
-            _event(s),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -303,21 +377,31 @@ class _QuestAppState extends State<QuestApp> {
   Widget _meters(GameState s) {
     Widget meter(String name, String key, bool reverse) {
       final value = s.meters[key]!;
+      final trouble = reverse ? value >= 7500 : value <= 2500;
       return Expanded(
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('$name $value / 10000', softWrap: true),
-                const SizedBox(height: 6),
-                LinearProgressIndicator(
-                  value: value / 10000,
-                  color: reverse ? Colors.orange : Colors.teal,
-                ),
-              ],
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$name ${reverse ? (value >= 7500 ? 'つらい' : '余裕あり') : (value <= 2500 ? '危険' : '維持中')}',
+                softWrap: true,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 4),
+              LinearProgressIndicator(
+                value: value / 10000,
+                minHeight: 7,
+                color: trouble
+                    ? QuestColors.danger
+                    : reverse
+                    ? QuestColors.amber
+                    : QuestColors.teal,
+                backgroundColor: const Color(0xffe2e5dd),
+                semanticsLabel: '$name $value / 10000',
+              ),
+            ],
           ),
         ),
       );
@@ -354,11 +438,42 @@ class _QuestAppState extends State<QuestApp> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (closing || handover) const Text('終業処理カード'),
-        Text(title, style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
-        Text(description),
+        if (s.timeMinutes >= widget.controller.content.balance.plannedFinish)
+          _panel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('定時です。', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 4),
+                Text(
+                  s.tasks.total == 0
+                      ? '残務はありません。最後の申し送りをして帰りましょう。'
+                      : '残務は${s.tasks.total}件。片づけるか、相談して引き継ぎましょう。',
+                ),
+              ],
+            ),
+          ),
+        if (s.timeMinutes >= widget.controller.content.balance.plannedFinish)
+          const SizedBox(height: 12),
+        _panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                closing || handover ? '終業処理カード' : (event?.category ?? '病棟の出来事'),
+                style: Theme.of(context).textTheme.labelLarge
+                    ?.copyWith(color: QuestColors.teal),
+              ),
+              const SizedBox(height: 8),
+              Text(title, style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 10),
+              Text(description, style: Theme.of(context).textTheme.bodyLarge),
+            ],
+          ),
+        ),
         const SizedBox(height: 16),
+        Text('どう動く？', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
         for (final choice in widget.controller.choices) ...[
           OutlinedButton(
             key: Key('choice-${choice.choiceId}'),
@@ -370,7 +485,9 @@ class _QuestAppState extends State<QuestApp> {
                   ),
             style: OutlinedButton.styleFrom(
               alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              backgroundColor: QuestColors.paper,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              minimumSize: const Size.fromHeight(64),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,28 +509,59 @@ class _QuestAppState extends State<QuestApp> {
 
   Widget _outcome(GameState s) {
     final view = widget.controller.outcomeView;
+    final changes = <String>[
+      if (view != null) ...[
+        for (final entry in {
+          'hp': '体力',
+          'mental': 'メンタル',
+          'bladder': '膀胱',
+          'hunger': '空腹',
+        }.entries)
+          if (view.meterChanges[entry.key] != 0)
+            '${entry.value} ${signed(view.meterChanges[entry.key]!)}',
+        if (view.taskChanges.total != 0)
+          '残タスク ${signed(view.taskChanges.total)}',
+        if (view.patientChange != 0) '患者対応 ${signed(view.patientChange)}',
+        if (view.teamChange != 0) 'チーム ${signed(view.teamChange)}',
+      ],
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('行動結果', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
-        Text(s.outcomeText ?? s.currentOutcome?.text ?? ''),
-        const SizedBox(height: 12),
-        if (view != null) ...[
-          Text('経過時間 ${view.elapsedMinutes}分'),
-          Text(
-            '体力 ${signed(view.meterChanges['hp']!)}　メンタル ${signed(view.meterChanges['mental']!)}',
+        _panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('行動結果', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 10),
+              Text(
+                s.outcomeText ?? s.currentOutcome?.text ?? '',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 16),
+              if (view != null) ...[
+                Text(
+                  '+${view.elapsedMinutes}分',
+                  style: Theme.of(context).textTheme.headlineSmall
+                      ?.copyWith(color: QuestColors.amber),
+                ),
+                Text(
+                  '経過時間 ${view.elapsedMinutes}分',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final item in changes) Chip(label: Text(item)),
+                  ],
+                ),
+              ] else
+                const Text('結果の変化は再開前の画面で確認できます。'),
+            ],
           ),
-          Text(
-            '膀胱 ${signed(view.meterChanges['bladder']!)}　空腹 ${signed(view.meterChanges['hunger']!)}',
-          ),
-          Text(
-            'タスク変化　記録 ${signed(view.taskChanges.record)}　調整 ${signed(view.taskChanges.coordination)}　ケア ${signed(view.taskChanges.care)}',
-          ),
-          Text(qualitative('患者対応', view.patientChange)),
-          Text(qualitative('チーム関係', view.teamChange)),
-        ] else
-          const Text('結果の変化は再開前の画面で確認できます。'),
+        ),
         const SizedBox(height: 16),
         FilledButton(
           key: const Key('next'),
@@ -457,105 +605,140 @@ class _QuestAppState extends State<QuestApp> {
       'safety': '安全',
     };
     return SafeArea(
-      child: ListView(
-        key: Key(live ? 'resultScroll' : 'detailScroll'),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        children: [
-          Text('勤務終了', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(label, style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      child: _pageFrame(
+        child: ListView(
+          key: Key(live ? 'resultScroll' : 'detailScroll'),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          children: [
+            _panel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('本日の称号'),
+                  const Text('看護師クエスト　勤務結果'),
+                  const SizedBox(height: 16),
+                  Text('退勤時刻', style: Theme.of(context).textTheme.titleMedium),
                   Text(
-                    record.title,
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    gameTime(result.finishTime),
+                    style: Theme.of(context).textTheme.headlineLarge
+                        ?.copyWith(fontSize: 52, color: QuestColors.teal),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(label, style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: 12),
+                  Text(
+                    result.overtimeMinutes == 0
+                        ? '残業時間　0分'
+                        : '残業時間　${result.overtimeMinutes}分',
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '勤務 ${gameTime(record.startMinutes)} → ${gameTime(result.finishTime)}',
-          ),
-          Text('予定終了 ${gameTime(result.plannedFinishTime)}'),
-          Text(
-            result.overtimeMinutes == 0
-                ? '残業なし'
-                : '残業 ${result.overtimeMinutes}分',
-          ),
-          const SizedBox(height: 18),
-          Text('今日のふりかえり', style: Theme.of(context).textTheme.titleLarge),
-          Text('イベント ${record.eventCount}件・行動 ${record.choices.length}回'),
-          Text(
-            '休憩 ${result.counters.breakMinutes}分・最終残務 ${result.remainingTasks.total}件',
-          ),
-          Text(
-            result.reason == 'forcedRelief'
-                ? '残務を応援へ引き継いで終了しました。'
-                : '最終申し送りを終えました。',
-          ),
-          const SizedBox(height: 18),
-          Text('4軸評価', style: Theme.of(context).textTheme.titleLarge),
-          for (final entry in axes.entries)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(entry.value),
-              subtitle: Text(
-                '${result.axisScores[entry.key]} / 10000　評価 ${result.grades[entry.key]}',
-                style: Theme.of(context).textTheme.bodyMedium,
+            const SizedBox(height: 18),
+            Text('4軸評価', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            _panel(
+              child: Column(
+                children: [
+                  for (final entry in axes.entries) ...[
+                    Row(
+                      children: [
+                        Expanded(child: Text(entry.value)),
+                        Text(
+                          '${result.grades[entry.key]}　${result.axisScores[entry.key]}',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: ((result.axisScores[entry.key] ?? 0) / 10000)
+                          .clamp(0, 1),
+                      minHeight: 6,
+                    ),
+                    if (entry.key != 'safety') const SizedBox(height: 12),
+                  ],
+                ],
               ),
             ),
-          const SizedBox(height: 12),
-          if (live && widget.controller.history.error != null)
+            const SizedBox(height: 18),
+            _panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('本日の称号'),
+                  const SizedBox(height: 4),
+                  Text(
+                    record.title,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    result.reason == 'forcedRelief'
+                        ? '残務を応援へ引き継いで勤務を終えました。'
+                        : result.overtimeMinutes == 0
+                        ? '最終申し送りを終え、定時で退勤しました。'
+                        : '最終申し送りを終え、今日の勤務を締めくくりました。',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text('今日のふりかえり', style: Theme.of(context).textTheme.titleLarge),
             Text(
-              widget.controller.history.error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              '勤務 ${gameTime(record.startMinutes)} → ${gameTime(result.finishTime)} ・イベント ${record.eventCount}件',
             ),
-          if (live && widget.controller.store.error != null)
             Text(
-              widget.controller.store.error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              '行動 ${record.choices.length}回 ・休憩 ${result.counters.breakMinutes}分 ・最終残務 ${result.remainingTasks.total}件',
             ),
-          if (live && widget.controller.archiveError != null)
-            Text(
-              widget.controller.archiveError!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            const SizedBox(height: 12),
+            if (live && widget.controller.history.error != null)
+              Text(
+                widget.controller.history.error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            if (live && widget.controller.store.error != null)
+              Text(
+                widget.controller.store.error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            if (live && widget.controller.archiveError != null)
+              Text(
+                widget.controller.archiveError!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            if (live) ...[
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: widget.controller.canStartNew ? _start : null,
+                child: const Text('もう一度勤務する'),
+              ),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final message = await shareResultText(shareText(record));
+                if (mounted) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(message)));
+                }
+              },
+              icon: const Icon(Icons.share),
+              label: const Text('結果をテキストで共有'),
             ),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final message = await shareResultText(shareText(record));
-              if (mounted) {
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text(message)));
-              }
-            },
-            icon: const Icon(Icons.share),
-            label: const Text('結果をテキストで共有'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () => _showShareCard(record),
-            icon: const Icon(Icons.image),
-            label: const Text('共有画像を作る'),
-          ),
-          if (live) ...[
-            FilledButton(
-              onPressed: widget.controller.canStartNew ? _start : null,
-              child: const Text('もう一度勤務する'),
+            OutlinedButton.icon(
+              onPressed: () => _showShareCard(record),
+              icon: const Icon(Icons.image),
+              label: const Text('共有画像を作る'),
             ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => setState(() => page = 'home'),
-              child: const Text('ホームへ戻る'),
-            ),
+            if (live) ...[
+              OutlinedButton(
+                onPressed: () => setState(() => page = 'home'),
+                child: const Text('ホームへ戻る'),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -563,35 +746,43 @@ class _QuestAppState extends State<QuestApp> {
   Widget _history() {
     final history = widget.controller.history;
     return SafeArea(
-      child: ListView(
-        key: const Key('historyScroll'),
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (history.error != null)
-            Text(
-              history.error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          if (history.records.isEmpty) ...[
-            const SizedBox(height: 60),
-            const Text('まだ勤務記録がありません', textAlign: TextAlign.center),
-            const Text('最初の勤務に挑戦してみよう', textAlign: TextAlign.center),
-          ],
-          for (final record in history.records)
-            Card(
-              child: ListTile(
-                onTap: () => setState(() {
-                  selectedRecord = record;
-                  page = 'detail';
-                }),
-                title: Text(
-                  '${record.endedAtMillis == 0 ? '' : _date(record.endedAtMillis)}　${gameTime(record.result.finishTime)}',
-                ),
-                subtitle: Text('${_kind(record.result)}　${record.title}'),
-                trailing: const Icon(Icons.chevron_right),
+      child: _pageFrame(
+        child: ListView(
+          key: const Key('historyScroll'),
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (history.error != null)
+              Text(
+                history.error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-            ),
-        ],
+            if (history.records.isEmpty) ...[
+              const SizedBox(height: 60),
+              const Icon(
+                Icons.menu_book_outlined,
+                size: 48,
+                color: QuestColors.teal,
+              ),
+              const SizedBox(height: 12),
+              const Text('まだ勤務記録がありません', textAlign: TextAlign.center),
+              const Text('最初の勤務から、ここに記録が残ります。', textAlign: TextAlign.center),
+            ],
+            for (final record in history.records)
+              Card(
+                child: ListTile(
+                  onTap: () => setState(() {
+                    selectedRecord = record;
+                    page = 'detail';
+                  }),
+                  title: Text(
+                    '${record.endedAtMillis == 0 ? '' : _date(record.endedAtMillis)}　${gameTime(record.result.finishTime)}',
+                  ),
+                  subtitle: Text('${_kind(record.result)}　${record.title}'),
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -604,30 +795,86 @@ class _QuestAppState extends State<QuestApp> {
           title.id: title.name,
       },
     );
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        Text('勤務のふりかえり', style: Theme.of(context).textTheme.headlineSmall),
-        Text('総勤務回数 ${data.total}回'),
-        Text('定時退勤 ${data.onTime}回　定時率 ${data.onTimeRate.toStringAsFixed(1)}%'),
-        Text(
-          '総残業時間 ${data.overtimeMinutes}分　平均 ${data.averageOvertime.toStringAsFixed(1)}分',
+    return SafeArea(
+      child: _pageFrame(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('勤務のふりかえり', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 12),
+            if (data.total == 0)
+              _panel(child: const Text('まだ勤務記録がありません。勤務を終えると、ここに記録が集まります。')),
+            if (data.total > 0) ...[
+              _panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _stat('総勤務回数', '${data.total}回'),
+                    _stat('定時退勤率', '${data.onTimeRate.toStringAsFixed(1)}%'),
+                    _stat('総残業時間', '${data.overtimeMinutes}分'),
+                    _stat(
+                      '平均残業時間',
+                      '${data.averageOvertime.toStringAsFixed(1)}分',
+                    ),
+                    _stat('応援終了回数', '${data.relief}回'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('4軸の平均', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              _panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final axis in axisLabels.entries)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: _stat(
+                          axis.value,
+                          '${data.axisAverages[axis.key]!.toStringAsFixed(0)} / 10000',
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('獲得した称号', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              _panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final title in data.titleCounts.entries)
+                      _stat(title.key, '${title.value}回'),
+                    if (data.titleCounts.isEmpty) const Text('まだ称号がありません'),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
-        Text('応援終了 ${data.relief}回'),
-        const SizedBox(height: 16),
-        const Text('4軸の平均'),
-        for (final axis in axisLabels.entries)
-          Text(
-            '${axis.value} ${data.axisAverages[axis.key]!.toStringAsFixed(0)} / 10000',
-          ),
-        const SizedBox(height: 16),
-        const Text('獲得した称号'),
-        for (final title in data.titleCounts.entries)
-          Text('${title.key} ${title.value}回'),
-        if (data.titleCounts.isEmpty) const Text('まだ称号がありません'),
-      ],
+      ),
     );
   }
+
+  Widget _stat(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: Text(label)),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Future<void> _deleteAll() async {
     final confirmed = await showDialog<bool>(
@@ -707,7 +954,7 @@ class _QuestAppState extends State<QuestApp> {
   Widget _shareCard(ShiftRecord record) {
     final r = record.result;
     return Container(
-      color: const Color(0xffe8f3ef),
+      color: QuestColors.paper,
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -717,22 +964,19 @@ class _QuestAppState extends State<QuestApp> {
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           const Text('今日も無事に定時で帰れ。', style: TextStyle(fontSize: 15)),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
+          const Text('退勤時刻'),
           Text(
-            '退勤時刻  ${shiftTime(r.finishTime)}',
-            style: const TextStyle(fontSize: 21),
+            shiftTime(r.finishTime),
+            style: const TextStyle(
+              fontSize: 42,
+              fontWeight: FontWeight.w800,
+              color: QuestColors.teal,
+            ),
           ),
           Text(
             '残業時間  ${r.overtimeMinutes}分',
             style: const TextStyle(fontSize: 21),
-          ),
-          const SizedBox(height: 24),
-          const Text('本日の称号'),
-          Text(
-            record.title,
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           const Text('4軸評価'),
@@ -741,6 +985,14 @@ class _QuestAppState extends State<QuestApp> {
               '${axis.value}  ${r.axisScores[axis.key]} / 10000  ${r.grades[axis.key]}',
               style: const TextStyle(fontSize: 16),
             ),
+          const SizedBox(height: 24),
+          const Text('本日の称号'),
+          Text(
+            record.title,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );

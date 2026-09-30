@@ -68,7 +68,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('勤務を始める'));
+    await tester.tap(find.text('勤務をはじめる'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     for (final c in choices) {

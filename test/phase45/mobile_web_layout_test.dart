@@ -16,7 +16,9 @@ Future<void> visibleTap(WidgetTester tester, Finder finder) async {
 
 void main() {
   for (final width in [320.0, 390.0, 430.0]) {
-    testWidgets('${width.toInt()}dp mobile flow at textScale 1.5', (tester) async {
+    testWidgets('${width.toInt()}dp mobile flow at textScale 1.5', (
+      tester,
+    ) async {
       tester.view.physicalSize = Size(width, 640);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -33,7 +35,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await visibleTap(tester, find.text('勤務を始める'));
+      await visibleTap(tester, find.text('勤務をはじめる'));
       final choices = find.byKey(const Key('gameScroll'));
       expect(choices, findsOneWidget);
       final firstChoice = find.byKey(

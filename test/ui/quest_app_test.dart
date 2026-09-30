@@ -16,7 +16,7 @@ void main() {
     final c = fixtureController();
     await tester.pumpWidget(KangoshiQuestApp(controller: c));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('勤務を始める'));
+    await tapVisible(tester, find.text('勤務をはじめる'));
     final choice = find.byKey(const Key('choice-focused'));
     await tester.ensureVisible(choice);
     await tester.tap(choice);
@@ -39,7 +39,7 @@ void main() {
     final c = fixtureController();
     await tester.pumpWidget(KangoshiQuestApp(controller: c));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('勤務を始める'));
+    await tapVisible(tester, find.text('勤務をはじめる'));
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('勤務を中断しますか？'), findsOneWidget);
@@ -47,11 +47,11 @@ void main() {
     expect(c.state!.phase, 'awaitingChoice');
     await tapVisible(tester, find.byTooltip('戻る'));
     await tapVisible(tester, find.text('勤務を中断してホームへ戻る'));
-    expect(find.text('勤務のつづき'), findsOneWidget);
-    await tapVisible(tester, find.text('勤務を始める'));
+    expect(find.text('勤務を再開する'), findsOneWidget);
+    await tapVisible(tester, find.text('最初からやり直す'));
     expect(find.text('進行中の勤務があります'), findsOneWidget);
     await tapVisible(tester, find.text('キャンセル'));
-    await tapVisible(tester, find.text('勤務のつづき'));
+    await tapVisible(tester, find.text('勤務を再開する'));
     expect(c.state!.timeMinutes, 510);
   });
 
@@ -61,7 +61,7 @@ void main() {
     final c = fixtureController();
     await tester.pumpWidget(KangoshiQuestApp(controller: c));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('勤務を始める'));
+    await tapVisible(tester, find.text('勤務をはじめる'));
     expect(find.text('朝の段取り'), findsOneWidget);
     await tapVisible(tester, find.byKey(const Key('choice-focused')));
     expect(find.text('行動結果'), findsOneWidget);
@@ -77,7 +77,7 @@ void main() {
     expect(find.text('最終申し送り'), findsOneWidget);
     await tapVisible(tester, find.byKey(const Key('choice-short')));
     await tapVisible(tester, find.byKey(const Key('next')));
-    expect(find.text('勤務終了'), findsOneWidget);
+    expect(find.byKey(const Key('resultScroll')), findsOneWidget);
     expect(c.state!.result?.reason, 'normal');
   });
 
@@ -96,7 +96,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tapVisible(tester, find.text('勤務を始める'));
+      await tapVisible(tester, find.text('勤務をはじめる'));
       expect(find.textContaining('ゲーム内時刻'), findsOneWidget);
       expect(find.textContaining('定時 17:15'), findsOneWidget);
       expect(find.textContaining('残務 6件'), findsOneWidget);
