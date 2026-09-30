@@ -979,7 +979,7 @@
             {
               "outcomeId": "expected",
               "weight": 1,
-              "text": "トイレのコールの対応を分担し、残務を一件整理した。",
+              "text": "トイレのコールの対応を分担し、次の仕事に備えた。",
               "effects": {
                 "durationMinutes": 10,
                 "meterDelta": {
@@ -2537,7 +2537,7 @@
             {
               "outcomeId": "expected",
               "weight": 1,
-              "text": "水分のひと口の対応を分担し、残務を一件整理した。",
+              "text": "水分のひと口の対応を分担し、次の仕事に備えた。",
               "effects": {
                 "durationMinutes": 9,
                 "meterDelta": {
@@ -2662,7 +2662,7 @@
             {
               "outcomeId": "expected",
               "weight": 1,
-              "text": "休憩の順番の対応を分担し、残務を一件整理した。",
+              "text": "休憩の順番の対応を分担し、次の仕事に備えた。",
               "effects": {
                 "durationMinutes": 9,
                 "meterDelta": {
@@ -2775,7 +2775,7 @@
             {
               "outcomeId": "expected",
               "weight": 1,
-              "text": "自分のトイレの対応を分担し、残務を一件整理した。",
+              "text": "自分のトイレの対応を分担し、次の仕事に備えた。",
               "effects": {
                 "durationMinutes": 7,
                 "meterDelta": {
@@ -2877,7 +2877,7 @@
             {
               "outcomeId": "expected",
               "weight": 1,
-              "text": "空腹の合図の対応を分担し、残務を一件整理した。",
+              "text": "空腹の合図の対応を分担し、次の仕事に備えた。",
               "effects": {
                 "durationMinutes": 9,
                 "meterDelta": {

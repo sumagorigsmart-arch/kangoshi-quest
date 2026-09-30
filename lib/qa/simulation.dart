@@ -58,8 +58,9 @@ SimulatedShift runShift(
     }
     if (state.currentEventId == 'fallback') {
       fallbackStreak++;
-      if (fallbackStreak > maxFallbackStreak)
+      if (fallbackStreak > maxFallbackStreak) {
         maxFallbackStreak = fallbackStreak;
+      }
     } else {
       fallbackStreak = 0;
     }
@@ -69,8 +70,9 @@ SimulatedShift runShift(
     String id;
     String? expectedOutcome;
     if (replayChoices != null) {
-      if (index >= replayChoices.length)
+      if (index >= replayChoices.length) {
         throw StateError('Replay ended at $eventId');
+      }
       final parts = replayChoices[index].split(':');
       if (parts.length != 3 || parts[0] != state.eventInstanceId) {
         throw StateError('Replay instance mismatch at $eventId');
@@ -121,13 +123,15 @@ SimulatedShift runShift(
       throw StateError('Invalid break minutes at $eventId');
     }
     index++;
-    if (index > bundle.balance.maxChoices + 2)
+    if (index > bundle.balance.maxChoices + 2) {
       throw StateError('Infinite loop');
+    }
     if (state.phase != 'completed') {
       final timeBeforeNext = state.timeMinutes;
       state = engine.dispatch(state, const Next()).state;
-      if (state.timeMinutes < timeBeforeNext)
+      if (state.timeMinutes < timeBeforeNext) {
         throw StateError('Time reversed on Next');
+      }
     }
   }
   if (replayChoices != null && replayChoices.length != index) {

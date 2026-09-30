@@ -134,7 +134,7 @@ for index, (id, title, description, category, window, labels, pending) in enumer
                               (f'{title}の要点を押さえて先へ進んだ。',fast)),
                        choice('share',labels[2],f'分担や整理・約{shared["durationMinutes"]}分',
                               'selfCare' if self_event else 'coordination',
-                              (f'{title}の対応を分担し、残務を一件整理した。',shared))]})
+                              (f'{title}の対応を分担し、次の仕事に備えた。' if self_event or id == 'toilet_call' else f'{title}の対応を分担し、残務を一件整理した。',shared))]})
 
 assert len(events) == 50 and len({e['eventId'] for e in events}) == 50
 assert len(RANDOM_IDS) >= 10

@@ -44,7 +44,7 @@ Phase 1は `test/domain` と `test/content`、Phase 2は `test/application` と 
 & C:\tools\flutter\bin\flutter.bat build apk --debug
 ```
 
-通常の出力先は `build/app/outputs/flutter-apk/app-debug.apk` です。OneDriveがGradle中間ファイルをロックする場合、同一Git HEADのソースを一時ディレクトリへコピーしてビルドし、HEADを記録して `artifacts/app-debug-phase3.apk` へコピーします。既存buildやソースを強制削除しません。
+通常の出力先は `build/app/outputs/flutter-apk/app-debug.apk` です。OneDriveがGradle中間ファイルをロックする場合、同一Git HEADのソースを一時ディレクトリへコピーしてビルドし、HEADを記録して `artifacts/app-debug-phase3-<短縮HEAD>.apk` へコピーします。既存buildやソースを強制削除しません。
 
 ## 未実装・実機QA
 
