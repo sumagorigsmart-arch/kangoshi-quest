@@ -112,6 +112,7 @@ class ShiftRecord {
 abstract class HistoryStore {
   Future<String?> read();
   Future<void> write(String value);
+  Future<void> clear();
 }
 
 class PreferencesHistoryStore implements HistoryStore {
@@ -122,6 +123,8 @@ class PreferencesHistoryStore implements HistoryStore {
   Future<String?> read() => preferences.getString(key);
   @override
   Future<void> write(String value) => preferences.setString(key, value);
+  @override
+  Future<void> clear() => preferences.remove(key);
 }
 
 class MemoryHistoryStore implements HistoryStore {
@@ -132,6 +135,9 @@ class MemoryHistoryStore implements HistoryStore {
   Future<void> write(String value) async {
     this.value = value;
   }
+
+  @override
+  Future<void> clear() async => value = null;
 }
 
 /// Serializes updates and rejects duplicate run IDs, including concurrent calls.
@@ -191,5 +197,13 @@ class ShiftHistory extends ChangeNotifier {
       notifyListeners();
     });
     return operation;
+  }
+
+  Future<void> clear() async {
+    await _pending;
+    await store.clear();
+    _records = [];
+    error = null;
+    notifyListeners();
   }
 }

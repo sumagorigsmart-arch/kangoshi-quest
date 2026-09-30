@@ -8,17 +8,41 @@ import 'shift_history.dart';
 abstract class ShiftStore {
   GameState? get current;
   OutcomeView? get outcomeView;
+  int? get startedAtMillis;
+  String? get error;
+  bool get durable;
+  bool get canRestoreBackup;
+  Future<void> restoreBackup();
+  void setOnChanged(VoidCallback callback);
+  void setStartedAtMillis(int value);
   void save(GameState state, OutcomeView? outcomeView);
   void clear();
+  Future<void> flush();
+  Future<void> clearPersisted();
 }
 
 class MemoryShiftStore implements ShiftStore {
   GameState? _current;
   OutcomeView? _outcomeView;
+  int? _startedAtMillis;
+  @override
+  String? get error => null;
+  @override
+  bool get durable => false;
+  @override
+  bool get canRestoreBackup => false;
+  @override
+  Future<void> restoreBackup() async {}
+  @override
+  void setOnChanged(VoidCallback callback) {}
   @override
   GameState? get current => _current;
   @override
   OutcomeView? get outcomeView => _outcomeView;
+  @override
+  int? get startedAtMillis => _startedAtMillis;
+  @override
+  void setStartedAtMillis(int value) => _startedAtMillis = value;
   @override
   void save(GameState state, OutcomeView? outcomeView) {
     _current = state;
@@ -29,7 +53,13 @@ class MemoryShiftStore implements ShiftStore {
   void clear() {
     _current = null;
     _outcomeView = null;
+    _startedAtMillis = null;
   }
+
+  @override
+  Future<void> flush() async {}
+  @override
+  Future<void> clearPersisted() async => clear();
 }
 
 /// A display snapshot of one transition. GameState remains authoritative.
@@ -73,19 +103,27 @@ class GameController extends ChangeNotifier {
   int _runSerial = 0;
   DateTime? _startedAt;
   Future<void>? _lastArchive;
+  bool _archiveReady = true;
+  String? archiveError;
   Future<void>? get lastArchive => _lastArchive;
 
   GameController(this.content, this.store, {ShiftHistory? history})
     : history = history ?? ShiftHistory(MemoryHistoryStore()) {
     engine = GameEngine(content.balance, content.events, content.titles);
+    store.setOnChanged(notifyListeners);
     _state = store.current;
+    if (_state?.phase == 'completed' && store.durable) _archiveReady = false;
     _outcomeView = store.outcomeView;
+    if (store.startedAtMillis != null) {
+      _startedAt = DateTime.fromMillisecondsSinceEpoch(store.startedAtMillis!);
+    }
   }
 
   GameState? get state => _state;
   OutcomeView? get outcomeView => _outcomeView;
   bool get sending => _sending;
   bool get hasActiveShift => _state != null && _state!.phase != 'completed';
+  bool get canStartNew => store.error == null && _archiveReady;
   List<ChoiceDefinition> get choices =>
       _state == null ? const [] : engine.choices(_state!);
   EventDefinition? get event {
@@ -97,9 +135,11 @@ class GameController extends ChangeNotifier {
   }
 
   void startNew({int? seed}) {
+    if (!canStartNew) throw StateError('勤務結果の保存が完了していません');
     if (hasActiveShift) throw StateError('Active shift requires confirmation');
     _runSerial++;
     _startedAt = DateTime.now();
+    store.setStartedAtMillis(_startedAt!.millisecondsSinceEpoch);
     final actualSeed =
         seed ?? (DateTime.now().microsecondsSinceEpoch & 0xffffffff);
     final initial = GameState.initial(
@@ -112,15 +152,34 @@ class GameController extends ChangeNotifier {
     _commit(engine.dispatch(initial, const StartShift()));
   }
 
-  void replaceShift({int? seed}) {
-    store.clear();
+  Future<void> replaceShift({int? seed}) async {
+    await store.clearPersisted();
     _state = null;
     startNew(seed: seed);
   }
 
+  Future<void> deleteAllRecords() async {
+    await (_lastArchive ?? Future.value());
+    await history.clear();
+    await store.clearPersisted();
+    _state = null;
+    _outcomeView = null;
+    _archiveReady = true;
+    archiveError = null;
+    notifyListeners();
+  }
+
+  Future<void> recoverCompleted() async {
+    final state = _state;
+    if (state?.phase == 'completed' && state?.result != null) {
+      await _archive(state!);
+    }
+  }
+
   bool select(String instanceId, String choiceId) {
     final before = _state;
-    if (_sending ||
+    if (store.error != null ||
+        _sending ||
         before == null ||
         before.phase != 'awaitingChoice' ||
         before.eventInstanceId != instanceId) {
@@ -144,7 +203,10 @@ class GameController extends ChangeNotifier {
 
   bool next() {
     final before = _state;
-    if (_sending || before == null || before.phase != 'showingOutcome') {
+    if (store.error != null ||
+        _sending ||
+        before == null ||
+        before.phase != 'showingOutcome') {
       return false;
     }
     _sending = true;
@@ -164,15 +226,32 @@ class GameController extends ChangeNotifier {
     store.save(transition.state, _outcomeView);
     if (transition.state.phase == 'completed' &&
         transition.state.result != null) {
+      _archiveReady = false;
+      archiveError = null;
+      _lastArchive = _archive(transition.state);
+    }
+    notifyListeners();
+  }
+
+  Future<void> _archive(GameState state) async {
+    try {
+      // The completed snapshot is durable before the history transaction.
+      await store.flush();
       final record = ShiftRecord.completed(
-        transition.state,
+        state,
         _startedAt ?? DateTime.now(),
         DateTime.now(),
         content.titles,
       );
-      _lastArchive = history.add(record).catchError((Object _) {
-        // History reports the error in the result UI; gameplay remains usable.
-      });
+      await history.add(record);
+      // Analysis is derived from unique history IDs, so it needs no second write.
+      await store.clearPersisted();
+      _archiveReady = true;
+      archiveError = null;
+    } catch (_) {
+      // Keep the completed snapshot for a retry on the next launch.
+      _archiveReady = false;
+      archiveError = '勤務結果を確定できませんでした。再読み込み後に再試行します。';
     }
     notifyListeners();
   }

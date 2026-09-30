@@ -57,9 +57,9 @@ Phase 1は `test/domain` と `test/content`、Phase 2は `test/application` と 
 
 shared_preferencesの非同期APIを使い、ShiftHistory repositoryを境界としてJSONの記録一覧を端末内に保存します。少量の完成勤務を扱うMVPでは導入が軽く、テスト用storeへ差し替えられるため採用しました。外側と各記録にschemaVersion: 1を持たせています。記録IDはrun IDで、保存処理を直列化し、同一IDの重複を防ぎます。記録には開始・終了日時、seed、content/balance version、終了種別、時刻と残業、4軸、称号、イベント数、選択履歴、休憩と残務を含む結果スナップショットが入ります。将来の変更時はversionごとに明示的なmigrationを追加します。
 
-空・欠損・decode不能・未知version・重複IDは異常として記録帳に表示します。元データは上書きせず、ゲームは開始できます。この状態では新しい記録の保存を止め、破損データの誤消去を避けます。保存失敗も結果画面へ表示します。バックアップや修復UIは後続Phaseです。端末設定からアプリデータを消すと履歴も消えます。
+空・欠損・decode不能・未知version・重複IDは異常として記録帳に表示します。元データは上書きせず、ゲームは開始できます。この状態では新しい記録の保存を止め、破損データの誤消去を避けます。保存失敗も結果画面へ表示します。履歴自体のバックアップや修復UIは後続Phaseです。端末設定からアプリデータを消すと履歴も消えます。
 
-進行中勤務はPhase 2の同一プロセス内メモリ保持のままです。プロセス終了後の復元には全状態とコンテンツversionの整合、原子的保存が必要なため、Phase 4では完成勤務のみ永続化します。
+Phase 4時点では進行中勤務は同一プロセス内のメモリ保持のみでした。Phase 5で永続化を追加しています。
 
 ### Phase 3バランスbaselineとPhase 4回帰
 
@@ -71,13 +71,13 @@ Phase 4はtest/phase4です。上記テストコマンドに追加済みです�
 
 ### 後続Phaseと実機QA
 
-SNS共有、本番共有カード、クラウド同期、アカウント、オンラインランキング、課金、広告、外部analytics SDK、進行中勤務のプロセス終了後復元、破損履歴の修復・書き出しは未実装です。
+クラウド同期、アカウント、オンラインランキング、課金、広告、外部analytics SDK、破損履歴の修復・書き出しは未実装です。
 
 Android実機は未確認です。結果画面と長文スクロール、320dp相当、Android文字サイズ変更、記録帳、アプリ終了→再起動→履歴保持、複数勤務の新着順、戻る、中断、連打、画面回転、長時間プレイを確認してください。
 
 ## Phase 4.5 Web版
 
-スマートフォンChromeの縦画面（320〜430dp相当）を主対象に、既存のゲームをWebで起動できます。通常のFlutter Web buildを使用します。結果確定済みの勤務記録は従来の `ShiftHistory` / `shared_preferences` により、WebではブラウザのlocalStorageへ保存されます。同じURL・同じブラウザで再読み込みしても記録帳に残ります。シークレットモードやブラウザデータ削除では失われる場合があります。進行中勤務の再読み込み後復元は行いません。
+スマートフォンChromeの縦画面（320〜430dp相当）を主対象に、既存のゲームをWebで起動できます。通常のFlutter Web buildを使用します。結果確定済みの勤務記録は従来の `ShiftHistory` / `shared_preferences` により、WebではブラウザのlocalStorageへ保存されます。同じURL・同じブラウザで再読み込みしても記録帳に残ります。シークレットモードやブラウザデータ削除では失われる場合があります。進行中勤務もPhase 5から復元します。
 
 ```powershell
 & C:\tools\flutter\bin\flutter.bat run -d chrome
@@ -92,8 +92,18 @@ OneDrive配下で `build/flutter_assets` が同期や別のFlutterプロセス�
 & C:\tools\flutter\bin\flutter.bat run -d web-server --web-hostname 0.0.0.0 --web-port 8080
 ```
 
-PCのLAN IPv4アドレスを `ipconfig` で確認し、スマートフォンChromeで `http://PCのIPアドレス:8080` を開きます。Windows Firewallが8080番への接続を遮断する場合は、プライベートネットワーク上の受信を許可してください。ページの再読み込み時は進行中勤務がリセットされます。
+PCのLAN IPv4アドレスを `ipconfig` で確認し、スマートフォンChromeで `http://PCのIPアドレス:8080` を開きます。Windows Firewallが8080番への接続を遮断する場合は、プライベートネットワーク上の受信を許可してください。
 
 Web公開用の成果物は `build/web` です。320/390/430dpと文字倍率1.5の画面回帰は `test/phase45` にあります。
 
-GitHub Pages向けの設定は `.github/workflows/deploy-web.yml` にあります。リポジトリの `main` にpushし、GitHubの Settings → Pages → Build and deployment の Source を **GitHub Actions** にすると、workflowが `build/web` を公開します。プロジェクトPagesのサブパスはリポジトリ名から設定します。現在のローカル作業ツリーにはGit remoteが設定されていないため、公開先リポジトリを決めてremoteを接続する必要があります。リポジトリの公開範囲は変更しません。privateリポジトリでのPages利用可否はGitHubのプラン・設定に依存します。
+GitHub Pages向けの設定は `.github/workflows/deploy-web.yml` にあります。`main` push後に同workflowが `build/web` を公開します。プロジェクトPagesのサブパスはリポジトリ名から設定します。公開URLは https://sumagorigsmart-arch.github.io/kangoshi-quest/ です。
+
+## Phase 5: 続き・ふりかえり・共有
+
+進行中勤務を `shared_preferences` の `active_shift_v1` に GameState 全体と表示中の行動結果差分、開始時刻を JSON 保存します。選択前と行動結果表示中のどちらからでも「勤務のつづき」で復帰できます。GameState には seed、rngState、eventInstanceId、確定 outcome、choiceHistory、UI phase が含まれるため、再読み込み時に抽選をやり直しません。保存データの schema/content/balance version と必須状態を検証します。
+
+更新前の正常なスナップショットを `active_shift_v1_backup` に1世代残します。主データが破損した場合はバックアップを表示し、明示的な「バックアップから復元」で復旧できます。破損した主データは自動で上書きせず、明示復元時も別キーへ退避します。復元できない場合はプレイを止め、記録削除を利用できます。保存失敗時も追加の保存を止め、元データを誤って上書きしません。
+
+勤務完了時は確定状態の保存完了を待ち、既存 schema 1 の勤務履歴へ勤務IDで一度だけ登録し、進行中データを消します。途中停止で完了状態が残った場合、次回起動時に同じ手順を再試行します。累計は重複IDのない履歴から計算するため、別の累計カウンタへ二重加算しません。記録帳の詳細から結果のテキスト共有と画像カード共有ができます。Web Share API が利用可能なら共有し、テキストはコピー、PNGはダウンロードへフォールバックします。共有のキャンセルは記録に影響しません。
+
+ホームの「勤務のふりかえり」に総勤務・定時回数と率・総/平均残業・応援終了・4軸平均・獲得称号と回数を端末内だけで表示します。ホームの「すべての記録を削除」は確認後に進行中勤務と履歴を消し、派生する累計・分析も初期状態へ戻します。外部サーバー、ログイン、ランキング、Analytics SDK は使いません。

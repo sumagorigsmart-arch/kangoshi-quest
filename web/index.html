@@ -24,6 +24,51 @@
   <title>看護師クエスト</title>
 </head>
 <body>
+  <script>
+    window.kangoshiShareText = async function (text) {
+      if (navigator.share) {
+        try {
+          await navigator.share({ text });
+          return '共有しました';
+        } catch (e) {
+          if (e.name === 'AbortError') return '共有をキャンセルしました';
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        return '共有テキストをコピーしました';
+      } catch (_) {
+        const input = document.createElement('textarea');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        const ok = document.execCommand('copy');
+        input.remove();
+        return ok ? '共有テキストをコピーしました' : 'コピーできませんでした';
+      }
+    };
+    window.kangoshiSharePng = async function (base64) {
+      const dataUrl = 'data:image/png;base64,' + base64;
+      const binary = atob(base64);
+      const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+      const file = new File([bytes], 'kangoshi-quest.png', {type: 'image/png'});
+      if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
+        try {
+          await navigator.share({files: [file]});
+          return '画像を共有しました';
+        } catch (e) {
+          if (e.name === 'AbortError') return '共有をキャンセルしました';
+        }
+      }
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = 'kangoshi-quest.png';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return '画像を保存しました';
+    };
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

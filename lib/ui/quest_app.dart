@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+
+import 'dart:ui' as ui;
 
 import '../application/game_controller.dart';
 import '../application/shift_history.dart';
+import '../application/shift_summary.dart';
 import '../domain/models.dart';
+import 'share_bridge.dart';
 
 String gameTime(int minutes) =>
     '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
@@ -21,6 +26,7 @@ class QuestApp extends StatefulWidget {
 class _QuestAppState extends State<QuestApp> {
   String page = 'home';
   ShiftRecord? selectedRecord;
+  final GlobalKey _cardKey = GlobalKey();
   @override
   void initState() {
     super.initState();
@@ -58,8 +64,9 @@ class _QuestAppState extends State<QuestApp> {
         ),
       );
       if (replace != true || !mounted) return;
-      widget.controller.replaceShift();
+      await widget.controller.replaceShift();
     } else {
+      await widget.controller.lastArchive;
       widget.controller.startNew();
     }
     setState(() => page = 'game');
@@ -70,7 +77,7 @@ class _QuestAppState extends State<QuestApp> {
       setState(() => page = 'history');
       return;
     }
-    if (page == 'history' || page == 'result') {
+    if (page == 'history' || page == 'result' || page == 'analysis') {
       setState(() => page = 'home');
       return;
     }
@@ -88,7 +95,7 @@ class _QuestAppState extends State<QuestApp> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('勤務を中断しますか？'),
-          content: const Text('進行状況は、このアプリを開いている間メモリに保持します。'),
+          content: const Text('進行状況は保存され、次回も続きから遊べます。'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -121,6 +128,7 @@ class _QuestAppState extends State<QuestApp> {
           title: Text(switch (page) {
             'how' => '遊び方',
             'history' => '記録帳',
+            'analysis' => '勤務のふりかえり',
             'detail' => '勤務記録',
             'result' => '勤務結果',
             _ => '看護師クエスト',
@@ -138,6 +146,7 @@ class _QuestAppState extends State<QuestApp> {
           'game' => _game(),
           'result' => _result(),
           'history' => _history(),
+          'analysis' => _analysis(),
           'detail' =>
             selectedRecord == null
                 ? _history()
@@ -166,11 +175,34 @@ class _QuestAppState extends State<QuestApp> {
               const SizedBox(height: 12),
               const Text('今日も無事に定時で帰れ。', textAlign: TextAlign.center),
               const SizedBox(height: 32),
-              FilledButton(onPressed: _start, child: const Text('勤務を始める')),
+              FilledButton(
+                onPressed: widget.controller.canStartNew ? _start : null,
+                child: const Text('勤務を始める'),
+              ),
+              if (widget.controller.store.error != null)
+                Text(
+                  widget.controller.store.error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              if (widget.controller.archiveError != null)
+                Text(
+                  widget.controller.archiveError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              if (widget.controller.store.canRestoreBackup)
+                OutlinedButton(
+                  onPressed: () async {
+                    await widget.controller.store.restoreBackup();
+                    if (mounted) setState(() {});
+                  },
+                  child: const Text('バックアップから復元'),
+                ),
               if (widget.controller.hasActiveShift) ...[
                 const SizedBox(height: 12),
                 OutlinedButton(
-                  onPressed: () => setState(() => page = 'game'),
+                  onPressed: widget.controller.store.error == null
+                      ? () => setState(() => page = 'game')
+                      : null,
                   child: const Text('勤務のつづき'),
                 ),
               ],
@@ -184,6 +216,11 @@ class _QuestAppState extends State<QuestApp> {
                 onPressed: () => setState(() => page = 'history'),
                 child: const Text('記録帳'),
               ),
+              OutlinedButton(
+                onPressed: () => setState(() => page = 'analysis'),
+                child: const Text('勤務のふりかえり'),
+              ),
+              TextButton(onPressed: _deleteAll, child: const Text('すべての記録を削除')),
               const SizedBox(height: 20),
               const Text(
                 '正式イベント50件から、今日の勤務が始まります。',
@@ -246,6 +283,11 @@ class _QuestAppState extends State<QuestApp> {
             ],
           ),
           Text('累計ナースコール ${s.counters.callCount}件'),
+          if (widget.controller.store.error != null)
+            Text(
+              widget.controller.store.error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           const SizedBox(height: 20),
           if (s.phase == 'completed')
             _completed(s)
@@ -476,8 +518,37 @@ class _QuestAppState extends State<QuestApp> {
               widget.controller.history.error!,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
+          if (live && widget.controller.store.error != null)
+            Text(
+              widget.controller.store.error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          if (live && widget.controller.archiveError != null)
+            Text(
+              widget.controller.archiveError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final message = await shareResultText(shareText(record));
+              if (mounted) {
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(message)));
+              }
+            },
+            icon: const Icon(Icons.share),
+            label: const Text('結果をテキストで共有'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => _showShareCard(record),
+            icon: const Icon(Icons.image),
+            label: const Text('共有画像を作る'),
+          ),
           if (live) ...[
-            FilledButton(onPressed: _start, child: const Text('もう一度勤務する')),
+            FilledButton(
+              onPressed: widget.controller.canStartNew ? _start : null,
+              child: const Text('もう一度勤務する'),
+            ),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () => setState(() => page = 'home'),
@@ -519,6 +590,156 @@ class _QuestAppState extends State<QuestApp> {
                 subtitle: Text('${_kind(record.result)}　${record.title}'),
                 trailing: const Icon(Icons.chevron_right),
               ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _analysis() {
+    final data = ShiftSummary.fromRecords(
+      widget.controller.history.records,
+      titleNames: {
+        for (final title in widget.controller.content.titles)
+          title.id: title.name,
+      },
+    );
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Text('勤務のふりかえり', style: Theme.of(context).textTheme.headlineSmall),
+        Text('総勤務回数 ${data.total}回'),
+        Text('定時退勤 ${data.onTime}回　定時率 ${data.onTimeRate.toStringAsFixed(1)}%'),
+        Text(
+          '総残業時間 ${data.overtimeMinutes}分　平均 ${data.averageOvertime.toStringAsFixed(1)}分',
+        ),
+        Text('応援終了 ${data.relief}回'),
+        const SizedBox(height: 16),
+        const Text('4軸の平均'),
+        for (final axis in axisLabels.entries)
+          Text(
+            '${axis.value} ${data.axisAverages[axis.key]!.toStringAsFixed(0)} / 10000',
+          ),
+        const SizedBox(height: 16),
+        const Text('獲得した称号'),
+        for (final title in data.titleCounts.entries)
+          Text('${title.key} ${title.value}回'),
+        if (data.titleCounts.isEmpty) const Text('まだ称号がありません'),
+      ],
+    );
+  }
+
+  Future<void> _deleteAll() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('すべての記録を削除'),
+        content: const Text('進行中勤務・勤務履歴・累計をこの端末から削除します。元に戻せません。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('削除する'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await widget.controller.deleteAllRecords();
+      if (mounted) {
+        setState(() {
+          selectedRecord = null;
+          page = 'home';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('削除できませんでした')));
+      }
+    }
+  }
+
+  Future<void> _showShareCard(ShiftRecord record) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        contentPadding: const EdgeInsets.all(12),
+        content: SizedBox(
+          width: 360,
+          child: SingleChildScrollView(
+            child: RepaintBoundary(key: _cardKey, child: _shareCard(record)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('閉じる'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final boundary =
+                  _cardKey.currentContext?.findRenderObject()
+                      as RenderRepaintBoundary?;
+              if (boundary == null) return;
+              final image = await boundary.toImage(pixelRatio: 2.5);
+              final data = await image.toByteData(
+                format: ui.ImageByteFormat.png,
+              );
+              if (data == null) return;
+              final message = await shareResultPng(data.buffer.asUint8List());
+              if (mounted) {
+                ScaffoldMessenger.of(this.context)
+                    .showSnackBar(SnackBar(content: Text(message)));
+              }
+            },
+            child: const Text('画像を共有・保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _shareCard(ShiftRecord record) {
+    final r = record.result;
+    return Container(
+      color: const Color(0xffe8f3ef),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            '看護師クエスト',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          ),
+          const Text('今日も無事に定時で帰れ。', style: TextStyle(fontSize: 15)),
+          const SizedBox(height: 28),
+          Text(
+            '退勤時刻  ${shiftTime(r.finishTime)}',
+            style: const TextStyle(fontSize: 21),
+          ),
+          Text(
+            '残業時間  ${r.overtimeMinutes}分',
+            style: const TextStyle(fontSize: 21),
+          ),
+          const SizedBox(height: 24),
+          const Text('本日の称号'),
+          Text(
+            record.title,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 24),
+          const Text('4軸評価'),
+          for (final axis in axisLabels.entries)
+            Text(
+              '${axis.value}  ${r.axisScores[axis.key]} / 10000  ${r.grades[axis.key]}',
+              style: const TextStyle(fontSize: 16),
             ),
         ],
       ),

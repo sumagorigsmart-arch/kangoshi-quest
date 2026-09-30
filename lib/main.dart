@@ -4,24 +4,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'application/game_controller.dart';
 import 'application/shift_history.dart';
+import 'application/persistent_shift_store.dart';
 import 'content/content_loader.dart';
 import 'ui/quest_app.dart';
 
 Future<GameController> loadGame() async {
-  final history = ShiftHistory(
-    PreferencesHistoryStore(SharedPreferencesAsync()),
-  );
+  final preferences = SharedPreferencesAsync();
+  final history = ShiftHistory(PreferencesHistoryStore(preferences));
   await history.load();
   final files = await Future.wait([
     rootBundle.loadString('assets/content/balance_v1.json'),
     rootBundle.loadString('assets/content/titles_v1.json'),
     rootBundle.loadString('assets/content/events_phase3.json'),
   ]);
-  return GameController(
-    ContentLoader.load(files[0], files[1], files[2]),
-    MemoryShiftStore(),
-    history: history,
-  );
+  final content = ContentLoader.load(files[0], files[1], files[2]);
+  final store = PersistentShiftStore(preferences, content);
+  await store.load();
+  final controller = GameController(content, store, history: history);
+  await controller.recoverCompleted();
+  return controller;
 }
 
 void main() => runApp(const KangoshiQuestApp());
