@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev.kangoshiquest.invalid/balance_v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion","balanceVersion","slots","naturalPerMinute","fatigueMinutes","majorLimit","maxChoices","dayEnd","plannedFinish","hardStop"],
+  "properties": {
+    "schemaVersion": {"const":1},
+    "balanceVersion": {"type":"string","minLength":1},
+    "slots": {"const":[510,535,560,585,610,635,660,685,710,735,760,785,810,835,860,885,910,935,960,990,1005,1020]},
+    "naturalPerMinute": {"type":"object","additionalProperties":false,"required":["hp","mental","bladder","hunger"],"properties":{"hp":{"type":"integer"},"mental":{"type":"integer"},"bladder":{"type":"integer"},"hunger":{"type":"integer"}}},
+    "fatigueMinutes": {"type":"integer","minimum":1},
+    "majorLimit": {"type":"integer","minimum":1},
+    "maxChoices": {"type":"integer","minimum":1},
+    "dayEnd": {"type":"integer","minimum":1},
+    "plannedFinish": {"type":"integer","minimum":1},
+    "hardStop": {"type":"integer","minimum":1}
+  }
+}

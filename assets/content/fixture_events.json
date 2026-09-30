@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "fixture_v1",
+  "scenarioId": "day_shift",
+  "events": [
+    {
+      "eventId":"f01","title":"朝の段取り","description":"今日はやることが多い。","category":"routine","timeRange":{"min":510,"max":510},"conditions":[],"weight":1,"tags":[],"maxPerRun":1,"onAppear":{},
+      "choices":[
+        {"choiceId":"focused","label":"一日の残務をまとめて片付ける","hint":"長い検証用行動","actionType":"work","outcomes":[{"outcomeId":"done","weight":1,"text":"残務を終えた。","effects":{"durationMinutes":479,"completeTasks":{"record":4,"coordination":1,"care":1}}}]},
+        {"choiceId":"slow","label":"少しずつ進める","hint":"残務が残る","actionType":"work","outcomes":[{"outcomeId":"slow","weight":1,"text":"仕事は続く。","effects":{"durationMinutes":479}}]},
+        {"choiceId":"overrun","label":"大きな作業を始める","hint":"応援終了の境界検証","actionType":"work","outcomes":[{"outcomeId":"late","weight":1,"text":"長い作業だった。","effects":{"durationMinutes":721,"completeTasks":{"record":4,"coordination":1,"care":1}}}]}
+      ]
+    },
+    {
+      "eventId":"f02","title":"夕方の連絡","description":"終業が近い。","category":"coordination","timeRange":{"min":990,"max":990},"conditions":[],"weight":1,"tags":["lateShift"],"maxPerRun":1,"onAppear":{"callCount":1},
+      "choices":[
+        {"choiceId":"quick","label":"連絡を整える","hint":"22分","actionType":"coordination","outcomes":[{"outcomeId":"done","weight":1,"text":"連絡を整えた。","effects":{"durationMinutes":22}}]},
+        {"choiceId":"long","label":"詳しく相談する","hint":"60分","actionType":"coordination","outcomes":[{"outcomeId":"done","weight":1,"text":"相談を終えた。","effects":{"durationMinutes":60}}]},
+        {"choiceId":"rest","label":"先に小休憩","hint":"5分","actionType":"rest","outcomes":[{"outcomeId":"done","weight":1,"text":"ひと息ついた。","effects":{"durationMinutes":5,"meterDelta":{"hp":200,"mental":200},"counters":{"breakMinutes":5}}}]}
+      ]
+    },
+    {
+      "eventId":"f03","title":"最後の確認","description":"業務を確認する。","category":"routine","timeRange":{"min":1020,"max":1020},"conditions":[],"weight":1,"tags":[],"maxPerRun":1,"onAppear":{},
+      "choices":[
+        {"choiceId":"quick","label":"簡潔に確認","hint":"1分","actionType":"selfCare","outcomes":[{"outcomeId":"done","weight":1,"text":"確認した。","effects":{"durationMinutes":1}}]},
+        {"choiceId":"slow","label":"丁寧に確認","hint":"16分","actionType":"selfCare","outcomes":[{"outcomeId":"done","weight":1,"text":"確認した。","effects":{"durationMinutes":16}}]},
+        {"choiceId":"rest","label":"短く休む","hint":"5分","actionType":"rest","outcomes":[{"outcomeId":"done","weight":1,"text":"休んだ。","effects":{"durationMinutes":5,"counters":{"breakMinutes":5}}}]}
+      ]
+    }
+  ]
+}

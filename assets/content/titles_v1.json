@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "titles": [
+    {"id":"ontime","name":"定時の勇者","priority":100,"conditions":[{"field":"reason","op":"eq","value":"normal"},{"field":"overtimeMinutes","op":"eq","value":0}]},
+    {"id":"relief","name":"応援にバトンを渡した者","priority":95,"conditions":[{"field":"reason","op":"eq","value":"forcedRelief"}]},
+    {"id":"sacrifice","name":"自分を犠牲にしすぎた勇者","priority":90,"conditions":[{"field":"axis.patient","op":"gte","value":7500},{"field":"axis.health","op":"lte","value":4199}]},
+    {"id":"bladder_limit","name":"膀胱の限界突破者","priority":85,"conditions":[{"field":"peakBladder","op":"gte","value":9500}]},
+    {"id":"no_break","name":"休憩という概念を失った者","priority":80,"conditions":[{"field":"counters.breakMinutes","op":"lte","value":14},{"field":"overtimeMinutes","op":"gte","value":45}]},
+    {"id":"team_pillar","name":"病棟を支えすぎた者","priority":75,"conditions":[{"field":"axis.team","op":"gte","value":7800},{"field":"overtimeMinutes","op":"gte","value":60}]},
+    {"id":"night_baton","name":"夜勤にすべてを託した者","priority":70,"conditions":[{"field":"transferredTotal","op":"gte","value":3},{"field":"reason","op":"eq","value":"normal"}]},
+    {"id":"call_master","name":"ナースコールマスター","priority":65,"conditions":[{"field":"counters.callCount","op":"gte","value":12}]},
+    {"id":"record_ghost","name":"記録の亡者","priority":60,"conditions":[{"field":"counters.completedRecord","op":"gte","value":10},{"field":"overtimeMinutes","op":"gte","value":30}]},
+    {"id":"bladder_guard","name":"膀胱の守護者","priority":55,"conditions":[{"field":"counters.toiletCount","op":"gte","value":2},{"field":"peakBladder","op":"lte","value":8499}]},
+    {"id":"self_guard","name":"自分もパーティーメンバー","priority":50,"conditions":[{"field":"counters.breakMinutes","op":"gte","value":30},{"field":"axis.health","op":"gte","value":5800},{"field":"reason","op":"eq","value":"normal"}]},
+    {"id":"mind_last","name":"メンタル残量1%の生還者","priority":45,"conditions":[{"field":"meters.mental","op":"lte","value":2200}]},
+    {"id":"survivor","name":"今日もなんとか生還した者","priority":0,"conditions":[]}
+  ]
+}

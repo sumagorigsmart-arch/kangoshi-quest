@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "balanceVersion": "balance_v1",
+  "slots": [510,535,560,585,610,635,660,685,710,735,760,785,810,835,860,885,910,935,960,990,1005,1020],
+  "naturalPerMinute": {"hp": -5, "mental": -2, "bladder": 12, "hunger": 10},
+  "fatigueMinutes": 5,
+  "majorLimit": 2,
+  "maxChoices": 30,
+  "dayEnd": 1020,
+  "plannedFinish": 1035,
+  "hardStop": 1230
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev.kangoshiquest.invalid/titles_v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion","titles"],
+  "properties": {
+    "schemaVersion": {"const":1},
+    "titles": {"type":"array","items":{"type":"object","additionalProperties":false,"required":["id","name","priority","conditions"],"properties":{"id":{"type":"string","minLength":1},"name":{"type":"string","minLength":1},"priority":{"type":"integer"},"conditions":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["field","op","value"],"properties":{"field":{"enum":["reason","overtimeMinutes","axis.patient","axis.team","axis.health","axis.safety","peakBladder","transferredTotal","counters.breakMinutes","counters.callCount","counters.completedRecord","counters.toiletCount","meters.mental"]},"op":{"enum":["eq","gte","lte"]},"value":{"oneOf":[{"type":"integer"},{"type":"string"}]}}}}}}}
+  }
+}
