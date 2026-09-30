@@ -202,7 +202,7 @@ class _QuestAppState extends State<QuestApp> {
               const SizedBox(height: 28),
               _panel(
                 child: const Text(
-                  'ナースコール、記録、入院、急変──\n次々起こる出来事を選択肢で乗り切り、定時退勤を目指すお仕事RPG。',
+                  '病棟の出来事に選択肢で対応し、定時退勤を目指すお仕事RPG。\n1勤務は数分から。',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -308,7 +308,7 @@ class _QuestAppState extends State<QuestApp> {
                       key: ValueKey(s.timeMinutes),
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
-                            color: reached
+                            color: reached && s.tasks.total > 0
                                 ? QuestColors.danger
                                 : QuestColors.teal,
                           ),
@@ -316,12 +316,14 @@ class _QuestAppState extends State<QuestApp> {
                   ),
                   Text(
                     reached
-                        ? '定時を過ぎました。残務を終えて退勤へ。'
-                        : remaining <= 60
-                        ? '定時まであと$remaining分'
+                        ? s.tasks.total > 0
+                              ? '定時を過ぎました。残務${s.tasks.total}件を片づけて退勤へ。'
+                              : '定時です。最後の申し送りで退勤へ。'
                         : '定時まであと$remaining分',
                     style: TextStyle(
-                      color: reached ? QuestColors.danger : QuestColors.muted,
+                      color: reached && s.tasks.total > 0
+                          ? QuestColors.danger
+                          : QuestColors.muted,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -472,7 +474,10 @@ class _QuestAppState extends State<QuestApp> {
           ),
         ),
         const SizedBox(height: 16),
-        Text('どう動く？', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'どう動く？ ひとつ選ぶと進みます',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         for (final choice in widget.controller.choices) ...[
           OutlinedButton(
@@ -509,6 +514,22 @@ class _QuestAppState extends State<QuestApp> {
 
   Widget _outcome(GameState s) {
     final view = widget.controller.outcomeView;
+    final selectedId = s.choiceHistory.isEmpty
+        ? null
+        : s.choiceHistory.last.split(':').elementAtOrNull(1);
+    String? selectedLabel;
+    for (final choice in widget.controller.engine.choices(
+      s.copyWith(phase: 'awaitingChoice'),
+    )) {
+      if (choice.choiceId == selectedId) selectedLabel = choice.label;
+    }
+    selectedLabel ??= switch ((s.currentEventId, selectedId)) {
+      ('closing_tasks', 'record') => '記録を終える',
+      ('closing_tasks', 'coordination') => '調整を終える',
+      ('closing_tasks', 'care') => 'ケアの残務を終える',
+      ('closing_tasks', 'consult') => '合意引継ぎを相談',
+      _ => null,
+    };
     final changes = <String>[
       if (view != null) ...[
         for (final entry in {
@@ -533,6 +554,10 @@ class _QuestAppState extends State<QuestApp> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('行動結果', style: Theme.of(context).textTheme.headlineSmall),
+              if (selectedLabel != null) ...[
+                const SizedBox(height: 6),
+                Text('選んだ行動：$selectedLabel'),
+              ],
               const SizedBox(height: 10),
               Text(
                 s.outcomeText ?? s.currentOutcome?.text ?? '',
@@ -682,6 +707,13 @@ class _QuestAppState extends State<QuestApp> {
                 ],
               ),
             ),
+            if (live) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: widget.controller.canStartNew ? _start : null,
+                child: const Text('もう一度勤務する'),
+              ),
+            ],
             const SizedBox(height: 18),
             Text('今日のふりかえり', style: Theme.of(context).textTheme.titleLarge),
             Text(
@@ -706,14 +738,6 @@ class _QuestAppState extends State<QuestApp> {
                 widget.controller.archiveError!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-            if (live) ...[
-              const SizedBox(height: 18),
-              FilledButton(
-                onPressed: widget.controller.canStartNew ? _start : null,
-                child: const Text('もう一度勤務する'),
-              ),
-              const SizedBox(height: 8),
-            ],
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: () async {
@@ -917,7 +941,7 @@ class _QuestAppState extends State<QuestApp> {
       builder: (context) => AlertDialog(
         contentPadding: const EdgeInsets.all(12),
         content: SizedBox(
-          width: 360,
+          width: (MediaQuery.sizeOf(context).width - 80).clamp(0.0, 360.0),
           child: SingleChildScrollView(
             child: RepaintBoundary(key: _cardKey, child: _shareCard(record)),
           ),
@@ -989,8 +1013,6 @@ class _QuestAppState extends State<QuestApp> {
           const Text('本日の称号'),
           Text(
             record.title,
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
         ],
