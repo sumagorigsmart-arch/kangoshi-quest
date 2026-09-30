@@ -118,5 +118,18 @@ void main() {
     );
     expect(tester.takeException(), isNull);
     expect(find.text('安全'), findsOneWidget);
+
+    await tester.pumpWidget(MediaQuery(
+      data: const MediaQueryData(textScaler: TextScaler.linear(1.5)),
+      child: KangoshiQuestApp(
+        key: const ValueKey('completed-result'),
+        controller: completedController('forcedRelief', 70),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('応援を呼んで勤務終了'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('安全'), 200,
+        scrollable: find.byType(Scrollable).last);
+    expect(tester.takeException(), isNull);
   });
 }
