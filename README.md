@@ -74,3 +74,26 @@ Phase 4はtest/phase4です。上記テストコマンドに追加済みです�
 SNS共有、本番共有カード、クラウド同期、アカウント、オンラインランキング、課金、広告、外部analytics SDK、進行中勤務のプロセス終了後復元、破損履歴の修復・書き出しは未実装です。
 
 Android実機は未確認です。結果画面と長文スクロール、320dp相当、Android文字サイズ変更、記録帳、アプリ終了→再起動→履歴保持、複数勤務の新着順、戻る、中断、連打、画面回転、長時間プレイを確認してください。
+
+## Phase 4.5 Web版
+
+スマートフォンChromeの縦画面（320〜430dp相当）を主対象に、既存のゲームをWebで起動できます。通常のFlutter Web buildを使用します。結果確定済みの勤務記録は従来の `ShiftHistory` / `shared_preferences` により、WebではブラウザのlocalStorageへ保存されます。同じURL・同じブラウザで再読み込みしても記録帳に残ります。シークレットモードやブラウザデータ削除では失われる場合があります。進行中勤務の再読み込み後復元は行いません。
+
+```powershell
+& C:\tools\flutter\bin\flutter.bat run -d chrome
+& C:\tools\flutter\bin\flutter.bat build web --release
+```
+
+OneDrive配下で `build/flutter_assets` が同期や別のFlutterプロセスにロックされると、`flutter run -d chrome` が中間ディレクトリを更新できない場合があります。起動中のFlutterを終了して再試行してください。解消しない場合は、ソースをOneDrive外の作業ディレクトリへコピーして `flutter pub get` から実行できます。
+
+公開URLがない場合、PCとスマートフォンを同じWi-Fiへ接続し、プロジェクト直下で以下を起動します。
+
+```powershell
+& C:\tools\flutter\bin\flutter.bat run -d web-server --web-hostname 0.0.0.0 --web-port 8080
+```
+
+PCのLAN IPv4アドレスを `ipconfig` で確認し、スマートフォンChromeで `http://PCのIPアドレス:8080` を開きます。Windows Firewallが8080番への接続を遮断する場合は、プライベートネットワーク上の受信を許可してください。ページの再読み込み時は進行中勤務がリセットされます。
+
+Web公開用の成果物は `build/web` です。320/390/430dpと文字倍率1.5の画面回帰は `test/phase45` にあります。
+
+GitHub Pages向けの設定は `.github/workflows/deploy-web.yml` にあります。リポジトリの `main` にpushし、GitHubの Settings → Pages → Build and deployment の Source を **GitHub Actions** にすると、workflowが `build/web` を公開します。プロジェクトPagesのサブパスはリポジトリ名から設定します。現在のローカル作業ツリーにはGit remoteが設定されていないため、公開先リポジトリを決めてremoteを接続する必要があります。リポジトリの公開範囲は変更しません。privateリポジトリでのPages利用可否はGitHubのプラン・設定に依存します。
