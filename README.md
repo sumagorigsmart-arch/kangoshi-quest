@@ -15,6 +15,16 @@
 
 Phase 1は `test/domain` と `test/content`、Phase 2は `test/application` と `test/ui`、Phase 3は `test/phase3` です。OneDrive配下で既存の `build/unit_test_assets` がロックされることがあるため、ファイルを直接読むテストには `--no-test-assets` を使用します。
 
+## Phase 8 日勤フローとTask Queue
+
+新規勤務は08:30の朝申し送りから始まり、午前ケア、設定可能な昼食開始時刻（初期値11:30）、休憩可能時間、午後ケア、15:30〜15:50の申し送り、残務処理を経て17:00に定時到達します。時刻と完了状況から勤務フェーズをdomain層で導出します。17:00では勤務を自動終了せず、未処理と記録を確認できます。
+
+`lib/domain/day_shift.dart` に個別Task、Routine / Dynamic / Documentation分類、優先度、期限、ソート、完了時の記録Task生成、点滴交換・検査の代表fixtureを置いています。Routine Taskは勤務開始時に生成し、画面では今処理できる仕事を中心に表示します。「あとでやる」は5分進め、TaskはQueueに残します。旧イベントの選択・結果・4軸評価は維持し、4状態ゲージは補助表示へ移しました。旧イベント残務の集計と個別Task QueueはPhase 8では別管理です。
+
+進行中勤務の保存エンベロープはschemaVersion 2です。GameState内の既存schemaVersion 1と既存キーを保ち、`workQueue`と導出した`shiftPhase`を追加しました。旧schemaVersion 1の勤務はそのまま読み込め、次の保存時にエンベロープを2へ更新します。旧勤務は従来のイベント進行として続行し、新規勤務にRoutine Taskを生成します。勤務履歴の保存形式は変更していません。
+
+日勤フローをheadlessで確認するには `dart run bin/day_shift.dart` を実行します。08:30開始、15:30の申し送り、17:00到達を検証し、残った未処理・記録件数をJSONで出力します。
+
 ## validator・simulation・seed再現
 
 ```powershell

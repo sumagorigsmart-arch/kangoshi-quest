@@ -7,6 +7,7 @@ import '../application/game_controller.dart';
 import '../application/shift_history.dart';
 import '../application/shift_summary.dart';
 import '../domain/models.dart';
+import '../domain/day_shift.dart';
 import 'share_bridge.dart';
 import 'quest_theme.dart';
 
@@ -284,94 +285,190 @@ class _QuestAppState extends State<QuestApp> {
   Widget _game() {
     final s = widget.controller.state;
     if (s == null) return const Center(child: Text('勤務がありません'));
-    final finish = widget.controller.content.balance.plannedFinish;
+    final finish = s.workQueue == null
+        ? widget.controller.content.balance.plannedFinish
+        : 1020;
     final remaining = finish - s.timeMinutes;
     final reached = remaining <= 0;
+    final pendingWork = s.workQueue?.pendingCount ?? s.tasks.total;
     return SafeArea(
       child: _pageFrame(
-        child: ListView(
+        child: SingleChildScrollView(
           key: const Key('gameScroll'),
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            _panel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      s.workQueue == null
+                          ? 'ゲーム内時刻　定時 17:15'
+                          : 'ゲーム内時刻　定時 17:00',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Text(
+                        gameTime(s.timeMinutes),
+                        key: ValueKey(s.timeMinutes),
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(
+                              color: reached && pendingWork > 0
+                                  ? QuestColors.danger
+                                  : QuestColors.teal,
+                            ),
+                      ),
+                    ),
+                    Text(
+                      reached
+                          ? pendingWork > 0
+                                ? s.workQueue == null
+                                      ? '定時を過ぎました。残務${s.tasks.total}件を片づけて退勤へ。'
+                                      : '定時到達。未処理$pendingWork件を確認してください。'
+                                : '定時です。最後の申し送りで退勤へ。'
+                          : '定時まであと$remaining分',
+                      style: TextStyle(
+                        color: reached && pendingWork > 0
+                            ? QuestColors.danger
+                            : QuestColors.muted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (s.workQueue != null) _workOverview(s),
+                    ExpansionTile(
+                      key: const Key('conditionMeters'),
+                      title: const Text('体調・状態（補助情報）'),
+                      tilePadding: EdgeInsets.zero,
+                      children: [_meters(s)],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (s.workQueue != null) ...[
+                const SizedBox(height: 12),
+                _workTaskPanel(s),
+              ],
+              if (widget.controller.store.error != null)
+                Text(
+                  widget.controller.store.error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              const SizedBox(height: 16),
+              if (s.phase == 'completed')
+                _completed(s)
+              else if (s.phase == 'showingOutcome')
+                _outcome(s)
+              else
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  transitionBuilder: (child, animation) =>
+                      FadeTransition(opacity: animation, child: child),
+                  child: KeyedSubtree(
+                    key: ValueKey(s.eventInstanceId),
+                    child: _event(s),
+                  ),
+                ),
+              ExpansionTile(
+                key: const Key('tasks'),
+                tilePadding: EdgeInsets.zero,
+                title: Text('残務 ${s.tasks.total}件'),
                 children: [
-                  Text(
-                    'ゲーム内時刻　定時 17:15',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
-                      gameTime(s.timeMinutes),
-                      key: ValueKey(s.timeMinutes),
-                      style: Theme.of(context).textTheme.headlineLarge
-                          ?.copyWith(
-                            color: reached && s.tasks.total > 0
-                                ? QuestColors.danger
-                                : QuestColors.teal,
-                          ),
+                      '記録 ${s.tasks.record}件　調整 ${s.tasks.coordination}件　ケア ${s.tasks.care}件',
                     ),
                   ),
-                  Text(
-                    reached
-                        ? s.tasks.total > 0
-                              ? '定時を過ぎました。残務${s.tasks.total}件を片づけて退勤へ。'
-                              : '定時です。最後の申し送りで退勤へ。'
-                        : '定時まであと$remaining分',
-                    style: TextStyle(
-                      color: reached && s.tasks.total > 0
-                          ? QuestColors.danger
-                          : QuestColors.muted,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _meters(s),
                 ],
               ),
-            ),
-            const SizedBox(height: 12),
-            ExpansionTile(
-              key: const Key('tasks'),
-              tilePadding: EdgeInsets.zero,
-              title: Text('残務 ${s.tasks.total}件'),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    '記録 ${s.tasks.record}件　調整 ${s.tasks.coordination}件　ケア ${s.tasks.care}件',
-                  ),
-                ),
-              ],
-            ),
-            Text(
-              '累計ナースコール ${s.counters.callCount}件',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            if (widget.controller.store.error != null)
               Text(
-                widget.controller.store.error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                '累計ナースコール ${s.counters.callCount}件',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-            const SizedBox(height: 16),
-            if (s.phase == 'completed')
-              _completed(s)
-            else if (s.phase == 'showingOutcome')
-              _outcome(s)
-            else
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                transitionBuilder: (child, animation) =>
-                    FadeTransition(opacity: animation, child: child),
-                child: KeyedSubtree(
-                  key: ValueKey(s.eventInstanceId),
-                  child: _event(s),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _workOverview(GameState s) {
+    final queue = s.workQueue!;
+    final phase = s.shiftPhase!;
+    final routine = queue.routine
+        .where((t) => t.status == WorkTaskStatus.pending)
+        .toList();
+    final currentRoutine = routine.where((t) => t.shiftPhase == phase).toList();
+    final futureRoutine = routine
+        .where((t) => t.scheduledAt != null && t.scheduledAt! >= s.timeMinutes)
+        .toList();
+    final next = currentRoutine.isNotEmpty
+        ? currentRoutine.first
+        : futureRoutine.isNotEmpty
+        ? futureRoutine.first
+        : null;
+    final approaching = queue.pending
+        .where(
+          (t) =>
+              t.deadline != null &&
+              deadlineState(t, s.timeMinutes) != DeadlineState.comfortable,
+        )
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Text(
+          phaseLabel(phase),
+          key: const Key('shiftPhase'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        Text('次：${next?.title ?? '残務処理'}', key: const Key('nextRoutine')),
+        Text(
+          '未処理 ${queue.pendingCount}　記録 ${queue.documentationCount}',
+          key: const Key('workCounts'),
+        ),
+        for (final task in approaching.take(2))
+          Text(
+            '${task.title} ${deadlineState(task, s.timeMinutes) == DeadlineState.overdue ? '期限超過' : 'あと${task.deadline! - s.timeMinutes}分'}',
+            key: Key('deadline-${task.taskId}'),
+            style: const TextStyle(color: QuestColors.danger),
+          ),
+      ],
+    );
+  }
+
+  Widget _workTaskPanel(GameState s) {
+    final queue = s.workQueue!;
+    final available = availableTasks(queue, s.timeMinutes);
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('いま処理できる業務', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          for (final task in available.take(5))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: OutlinedButton(
+                key: Key('work-${task.taskId}'),
+                onPressed: () =>
+                    widget.controller.completeWorkTask(task.taskId),
+                child: Text('${task.title}　${task.estimatedMinutes}分'),
+              ),
+            ),
+          if (available.isEmpty) const Text('今すぐ処理できる業務はありません'),
+          TextButton(
+            key: const Key('workLater'),
+            onPressed: () => widget.controller.advanceWorkClock(5),
+            child: const Text('あとでやる（5分進める）'),
+          ),
+        ],
       ),
     );
   }

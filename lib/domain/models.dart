@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'day_shift.dart';
+
 Map<String, dynamic> object(dynamic value) =>
     Map<String, dynamic>.from(value as Map);
 int number(dynamic value) => value as int;
@@ -511,6 +513,19 @@ class GameResult {
 }
 
 class GameState {
+  final TaskQueue? workQueue;
+  ShiftPhase? get shiftPhase {
+    final queue = workQueue;
+    if (queue == null) return null;
+    final lunchDone = queue.tasks
+        .where((t) => t.shiftPhase == ShiftPhase.lunchCare)
+        .every((t) => t.status == WorkTaskStatus.completed);
+    final breakDone = queue.tasks.any(
+      (t) => t.taskId == 'break' && t.status == WorkTaskStatus.completed,
+    );
+    return phaseAt(timeMinutes, lunchDone: lunchDone, breakDone: breakDone);
+  }
+
   final String runId, contentVersion, balanceVersion, phase;
   final int schemaVersion,
       seed,
@@ -563,6 +578,7 @@ class GameState {
     this.currentOutcome,
     required this.handoverDone,
     this.result,
+    this.workQueue,
   }) : meters = UnmodifiableMapView(Map.of(meters)),
        scores = UnmodifiableMapView(Map.of(scores)),
        flags = UnmodifiableMapView(Map.of(flags)),
@@ -629,6 +645,7 @@ class GameState {
     OutcomeDefinition? currentOutcome,
     bool? handoverDone,
     GameResult? result,
+    TaskQueue? workQueue,
     bool clearCurrent = false,
   }) => GameState(
     runId: runId,
@@ -665,6 +682,7 @@ class GameState {
     currentOutcome: clearCurrent ? null : currentOutcome ?? this.currentOutcome,
     handoverDone: handoverDone ?? this.handoverDone,
     result: result ?? this.result,
+    workQueue: workQueue ?? this.workQueue,
   );
   factory GameState.fromJson(dynamic value) {
     final m = object(value);
@@ -701,6 +719,9 @@ class GameState {
           : OutcomeDefinition.fromJson(m['currentOutcome']),
       handoverDone: m['handoverDone'],
       result: m['result'] == null ? null : GameResult.fromJson(m['result']),
+      workQueue: m['workQueue'] == null
+          ? null
+          : TaskQueue.fromJson(m['workQueue']),
     );
   }
   Map<String, dynamic> toJson() => {
@@ -734,6 +755,8 @@ class GameState {
     'currentOutcome': currentOutcome?.toJson(),
     'handoverDone': handoverDone,
     'result': result?.toJson(),
+    'workQueue': workQueue?.toJson(),
+    'shiftPhase': shiftPhase?.name,
   };
 }
 

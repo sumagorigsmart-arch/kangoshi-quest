@@ -42,7 +42,9 @@ class PersistentShiftStore implements ShiftStore {
 
   Map<String, dynamic> _decode(String raw) {
     final data = Map<String, dynamic>.from(jsonDecode(raw) as Map);
-    if (data['schemaVersion'] != 1) throw const FormatException('schema');
+    if (data['schemaVersion'] != 1 && data['schemaVersion'] != 2) {
+      throw const FormatException('schema');
+    }
     final state = GameState.fromJson(data['state']);
     final counters = Map<String, dynamic>.from(
       Map<String, dynamic>.from(data['state'] as Map)['counters'] as Map,
@@ -175,7 +177,7 @@ class PersistentShiftStore implements ShiftStore {
     _current = state;
     _outcomeView = outcomeView;
     final raw = jsonEncode({
-      'schemaVersion': 1,
+      'schemaVersion': 2,
       'startedAtMillis': _startedAtMillis,
       'state': state.toJson(),
       'outcomeView': outcomeView == null

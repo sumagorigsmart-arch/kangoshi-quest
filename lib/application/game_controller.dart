@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../content/content_loader.dart';
 import '../domain/engine.dart';
 import '../domain/models.dart';
+import '../domain/day_shift.dart';
 import 'shift_history.dart';
 
 abstract class ShiftStore {
@@ -149,7 +150,12 @@ class GameController extends ChangeNotifier {
       content.balanceVersion,
     );
     _outcomeView = null;
-    _commit(engine.dispatch(initial, const StartShift()));
+    _commit(
+      engine.dispatch(
+        initial.copyWith(workQueue: generateRoutineTasks()),
+        const StartShift(),
+      ),
+    );
   }
 
   Future<void> replaceShift({int? seed}) async {
@@ -221,9 +227,63 @@ class GameController extends ChangeNotifier {
     }
   }
 
+  bool completeWorkTask(String taskId) {
+    final before = _state;
+    if (before == null ||
+        before.workQueue == null ||
+        before.phase == 'completed' ||
+        store.error != null) {
+      return false;
+    }
+    final available = availableTasks(before.workQueue!, before.timeMinutes);
+    if (!available.any((t) => t.taskId == taskId)) return false;
+    final task = available.firstWhere((t) => t.taskId == taskId);
+    final now = before.timeMinutes + task.estimatedMinutes;
+    final queue = advanceScheduledTasks(
+      before.workQueue!.complete(taskId, now),
+      before.timeMinutes,
+      now,
+    );
+    _state = before.copyWith(timeMinutes: now, workQueue: queue);
+    store.save(_state!, _outcomeView);
+    notifyListeners();
+    return true;
+  }
+
+  void advanceWorkClock(int minutes) {
+    final before = _state;
+    if (before == null ||
+        before.workQueue == null ||
+        before.phase == 'completed' ||
+        minutes <= 0) {
+      return;
+    }
+    final now = before.timeMinutes + minutes;
+    _state = before.copyWith(
+      timeMinutes: now,
+      workQueue: advanceScheduledTasks(
+        before.workQueue!,
+        before.timeMinutes,
+        now,
+      ),
+    );
+    store.save(_state!, _outcomeView);
+    notifyListeners();
+  }
+
   void _commit(Transition transition) {
-    _state = transition.state;
-    store.save(transition.state, _outcomeView);
+    final previous = _state;
+    final queue = transition.state.workQueue;
+    _state = queue == null || previous == null
+        ? transition.state
+        : transition.state.copyWith(
+            workQueue: advanceScheduledTasks(
+              queue,
+              previous.timeMinutes,
+              transition.state.timeMinutes,
+            ),
+          );
+    store.save(_state!, _outcomeView);
     if (transition.state.phase == 'completed' &&
         transition.state.result != null) {
       _archiveReady = false;

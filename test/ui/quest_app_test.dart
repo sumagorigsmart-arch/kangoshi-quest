@@ -26,6 +26,7 @@ void main() {
     expect(c.state!.choiceHistory, hasLength(1));
     expect(find.byKey(const Key('choice-slow')), findsNothing);
     final next = find.byKey(const Key('next'));
+    await tester.ensureVisible(next);
     await tester.tap(next);
     await tester.tap(next);
     await tester.pumpAndSettle();
@@ -98,7 +99,7 @@ void main() {
       await tester.pumpAndSettle();
       await tapVisible(tester, find.text('勤務をはじめる'));
       expect(find.textContaining('ゲーム内時刻'), findsOneWidget);
-      expect(find.textContaining('定時 17:15'), findsOneWidget);
+      expect(find.textContaining('定時 17:00'), findsOneWidget);
       expect(find.textContaining('残務 6件'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.textContaining('累計ナースコール'),
