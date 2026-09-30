@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'application/game_controller.dart';
+import 'application/shift_history.dart';
 import 'content/content_loader.dart';
 import 'ui/quest_app.dart';
 
 Future<GameController> loadGame() async {
+  final history = ShiftHistory(
+    PreferencesHistoryStore(SharedPreferencesAsync()),
+  );
+  await history.load();
   final files = await Future.wait([
     rootBundle.loadString('assets/content/balance_v1.json'),
     rootBundle.loadString('assets/content/titles_v1.json'),
@@ -14,6 +20,7 @@ Future<GameController> loadGame() async {
   return GameController(
     ContentLoader.load(files[0], files[1], files[2]),
     MemoryShiftStore(),
+    history: history,
   );
 }
 

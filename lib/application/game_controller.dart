@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../content/content_loader.dart';
 import '../domain/engine.dart';
 import '../domain/models.dart';
+import 'shift_history.dart';
 
 abstract class ShiftStore {
   GameState? get current;
@@ -64,13 +65,18 @@ class OutcomeView {
 class GameController extends ChangeNotifier {
   final ContentBundle content;
   final ShiftStore store;
+  final ShiftHistory history;
   late final GameEngine engine;
   GameState? _state;
   OutcomeView? _outcomeView;
   bool _sending = false;
   int _runSerial = 0;
+  DateTime? _startedAt;
+  Future<void>? _lastArchive;
+  Future<void>? get lastArchive => _lastArchive;
 
-  GameController(this.content, this.store) {
+  GameController(this.content, this.store, {ShiftHistory? history})
+    : history = history ?? ShiftHistory(MemoryHistoryStore()) {
     engine = GameEngine(content.balance, content.events, content.titles);
     _state = store.current;
     _outcomeView = store.outcomeView;
@@ -93,6 +99,7 @@ class GameController extends ChangeNotifier {
   void startNew({int? seed}) {
     if (hasActiveShift) throw StateError('Active shift requires confirmation');
     _runSerial++;
+    _startedAt = DateTime.now();
     final actualSeed =
         seed ?? (DateTime.now().microsecondsSinceEpoch & 0xffffffff);
     final initial = GameState.initial(
@@ -155,6 +162,18 @@ class GameController extends ChangeNotifier {
   void _commit(Transition transition) {
     _state = transition.state;
     store.save(transition.state, _outcomeView);
+    if (transition.state.phase == 'completed' &&
+        transition.state.result != null) {
+      final record = ShiftRecord.completed(
+        transition.state,
+        _startedAt ?? DateTime.now(),
+        DateTime.now(),
+        content.titles,
+      );
+      _lastArchive = history.add(record).catchError((Object _) {
+        // History reports the error in the result UI; gameplay remains usable.
+      });
+    }
     notifyListeners();
   }
 }

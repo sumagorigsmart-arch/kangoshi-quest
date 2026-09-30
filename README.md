@@ -1,4 +1,4 @@
-# 看護師クエスト Phase 3
+# 看護師クエスト Phase 4
 
 「今日も無事に定時で帰れ。」架空の日勤病棟で、患者・チーム・時間・自分の状態をやりくりする風刺系お仕事RPGです。勤務は8:30開始、定時は17:15です。正式コンテンツは `assets/content/events_phase3.json` の **50イベント**で、1勤務には状態・時間帯・重みに応じた一部だけが現れます。検証専用の `fixture_events.json` は正式件数に含めず、アプリからも読み込みません。
 
@@ -9,7 +9,7 @@
 ```powershell
 & C:\tools\flutter\bin\flutter.bat pub get
 & C:\tools\flutter\bin\flutter.bat run
-& C:\tools\flutter\bin\flutter.bat test --no-test-assets test/domain test/content test/application test/ui test/phase3
+& C:\tools\flutter\bin\flutter.bat test --no-test-assets test/domain test/content test/application test/ui test/phase3 test/phase4
 & C:\tools\flutter\bin\flutter.bat analyze
 ```
 
@@ -48,4 +48,29 @@ Phase 1は `test/domain` と `test/content`、Phase 2は `test/application` と 
 
 ## 未実装・実機QA
 
-完成版結果画面、記録帳UI、永続保存、SNS共有、本番共有カードは後続Phaseです。現在の勤務保存は同一プロセス内のメモリのみです。Android実機では、320dp相当と大きな文字、長文スクロール、選択ボタン、戻る・中断確認、画面回転・アプリ再開、長時間プレイの操作感を確認してください。実機確認と人間プレイのバランス計測は未実施です。βテストで定時率と、丁寧・時間優先を選んだ際の残務増加、重大イベントの重み、休憩の取りやすさを再調整します。
+実機確認と人間プレイのバランス計測は未実施です。βテストで定時率と、丁寧・時間優先を選んだ際の残務増加、重大イベントの重み、休憩の取りやすさを再調整します。
+## Phase 4 追補
+
+勤務終了で定時・残業・応援終了を大きく表示します。勤務時刻、残業、既存domainの4軸評価（患者対応・チーム・自分の健康・安全）の数値と段階、本日の称号、イベント・行動・休憩・残務を表示します。称号は既存の13件を既存domainの条件と優先順位で判定します。結果からホームへ戻るか、新しいseedで再勤務できます。ホームの「記録帳」は新しい順で、保存済み記録から詳細を開きます。記録0件表示もあります。
+
+### ローカル保存とschema
+
+shared_preferencesの非同期APIを使い、ShiftHistory repositoryを境界としてJSONの記録一覧を端末内に保存します。少量の完成勤務を扱うMVPでは導入が軽く、テスト用storeへ差し替えられるため採用しました。外側と各記録にschemaVersion: 1を持たせています。記録IDはrun IDで、保存処理を直列化し、同一IDの重複を防ぎます。記録には開始・終了日時、seed、content/balance version、終了種別、時刻と残業、4軸、称号、イベント数、選択履歴、休憩と残務を含む結果スナップショットが入ります。将来の変更時はversionごとに明示的なmigrationを追加します。
+
+空・欠損・decode不能・未知version・重複IDは異常として記録帳に表示します。元データは上書きせず、ゲームは開始できます。この状態では新しい記録の保存を止め、破損データの誤消去を避けます。保存失敗も結果画面へ表示します。バックアップや修復UIは後続Phaseです。端末設定からアプリデータを消すと履歴も消えます。
+
+進行中勤務はPhase 2の同一プロセス内メモリ保持のままです。プロセス終了後の復元には全状態とコンテンツversionの整合、原子的保存が必要なため、Phase 4では完成勤務のみ永続化します。
+
+### Phase 3バランスbaselineとPhase 4回帰
+
+simulate 5000 1、4方針を各1250勤務。Phase 3 baselineは定時764件（15.28%）、残業3421件（68.42%）、応援終了815件（16.30%）。分担中心の定時746/1250、丁寧中心0/1250、時間優先中心0/1250。Phase 4でも全数値が完全一致しました。これは機械方針の結果で、人間の定時率ではありません。定時再現seedは17です。Phase 4ではイベントとバランスを変更していません。
+
+### Phase 4テストとAPK
+
+Phase 4はtest/phase4です。上記テストコマンドに追加済みです。通常のdebug APK出力先はbuild/app/outputs/flutter-apk/app-debug.apkです。OneDriveがGradle中間ファイルをロックする場合、同一Git HEADのソースを安全な一時ディレクトリへコピーし、ビルドしたHEADとSHA-256を記録します。
+
+### 後続Phaseと実機QA
+
+SNS共有、本番共有カード、クラウド同期、アカウント、オンラインランキング、課金、広告、外部analytics SDK、進行中勤務のプロセス終了後復元、破損履歴の修復・書き出しは未実装です。
+
+Android実機は未確認です。結果画面と長文スクロール、320dp相当、Android文字サイズ変更、記録帳、アプリ終了→再起動→履歴保持、複数勤務の新着順、戻る、中断、連打、画面回転、長時間プレイを確認してください。

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../application/game_controller.dart';
+import '../application/shift_history.dart';
 import '../domain/models.dart';
 
 String gameTime(int minutes) =>
@@ -19,15 +20,19 @@ class QuestApp extends StatefulWidget {
 
 class _QuestAppState extends State<QuestApp> {
   String page = 'home';
+  ShiftRecord? selectedRecord;
   @override
   void initState() {
     super.initState();
+    if (widget.controller.state?.phase == 'completed') page = 'result';
     widget.controller.addListener(_refresh);
+    widget.controller.history.addListener(_refresh);
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_refresh);
+    widget.controller.history.removeListener(_refresh);
     super.dispose();
   }
 
@@ -61,11 +66,23 @@ class _QuestAppState extends State<QuestApp> {
   }
 
   Future<void> _back() async {
+    if (page == 'detail') {
+      setState(() => page = 'history');
+      return;
+    }
+    if (page == 'history' || page == 'result') {
+      setState(() => page = 'home');
+      return;
+    }
     if (page == 'how') {
       setState(() => page = 'home');
       return;
     }
     if (page != 'game') return;
+    if (widget.controller.state?.phase == 'completed') {
+      setState(() => page = 'home');
+      return;
+    }
     if (widget.controller.hasActiveShift) {
       final leave = await showDialog<bool>(
         context: context,
@@ -90,29 +107,46 @@ class _QuestAppState extends State<QuestApp> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: page == 'home',
-    onPopInvokedWithResult: (didPop, result) {
-      if (!didPop) _back();
-    },
-    child: Scaffold(
-      appBar: AppBar(
-        title: Text(page == 'how' ? '遊び方' : '看護師クエスト'),
-        leading: page == 'home'
-            ? null
-            : IconButton(
-                tooltip: '戻る',
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _back,
-              ),
-      ),
-      body: switch (page) {
-        'how' => _how(),
-        'game' => _game(),
-        _ => _home(),
+  Widget build(BuildContext context) {
+    if (page == 'game' && widget.controller.state?.phase == 'completed') {
+      page = 'result';
+    }
+    return PopScope(
+      canPop: page == 'home',
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _back();
       },
-    ),
-  );
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(switch (page) {
+            'how' => '遊び方',
+            'history' => '記録帳',
+            'detail' => '勤務記録',
+            'result' => '勤務結果',
+            _ => '看護師クエスト',
+          }),
+          leading: page == 'home'
+              ? null
+              : IconButton(
+                  tooltip: '戻る',
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _back,
+                ),
+        ),
+        body: switch (page) {
+          'how' => _how(),
+          'game' => _game(),
+          'result' => _result(),
+          'history' => _history(),
+          'detail' =>
+            selectedRecord == null
+                ? _history()
+                : _recordDetail(selectedRecord!),
+          _ => _home(),
+        },
+      ),
+    );
+  }
 
   Widget _home() => SafeArea(
     child: Center(
@@ -145,8 +179,16 @@ class _QuestAppState extends State<QuestApp> {
                 onPressed: () => setState(() => page = 'how'),
                 child: const Text('遊び方'),
               ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: () => setState(() => page = 'history'),
+                child: const Text('記録帳'),
+              ),
               const SizedBox(height: 20),
-              const Text('正式イベント50件から、今日の勤務が始まります。', textAlign: TextAlign.center),
+              const Text(
+                '正式イベント50件から、今日の勤務が始まります。',
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
@@ -340,21 +382,157 @@ class _QuestAppState extends State<QuestApp> {
     );
   }
 
-  Widget _completed(GameState s) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text('勤務終了', style: Theme.of(context).textTheme.headlineSmall),
-      Text(
-        s.result?.reason == 'forcedRelief'
-            ? '応援に引き継いで勤務を終えました。'
-            : '最終申し送りを終えました。',
+  Widget _completed(GameState s) => const Text('勤務終了');
+
+  Widget _result() {
+    final state = widget.controller.state!;
+    final record =
+        widget.controller.history.records
+            .where((e) => e.id == state.runId)
+            .firstOrNull ??
+        ShiftRecord.completed(
+          state,
+          DateTime.now(),
+          DateTime.now(),
+          widget.controller.content.titles,
+        );
+    return _recordView(record, live: true);
+  }
+
+  Widget _recordDetail(ShiftRecord record) => _recordView(record, live: false);
+
+  Widget _recordView(ShiftRecord record, {required bool live}) {
+    final result = record.result;
+    final label = result.reason == 'forcedRelief'
+        ? '応援を呼んで勤務終了'
+        : result.overtimeMinutes == 0
+        ? '定時退勤！'
+        : '本日の退勤 ${gameTime(result.finishTime)}';
+    const axes = {
+      'patient': '患者対応',
+      'team': 'チーム',
+      'health': '自分の健康',
+      'safety': '安全',
+    };
+    return SafeArea(
+      child: ListView(
+        key: Key(live ? 'resultScroll' : 'detailScroll'),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        children: [
+          Text('勤務終了', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(label, style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('本日の称号'),
+                  Text(
+                    record.title,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '勤務 ${gameTime(record.startMinutes)} → ${gameTime(result.finishTime)}',
+          ),
+          Text('予定終了 ${gameTime(result.plannedFinishTime)}'),
+          Text(
+            result.overtimeMinutes == 0
+                ? '残業なし'
+                : '残業 ${result.overtimeMinutes}分',
+          ),
+          const SizedBox(height: 18),
+          Text('今日のふりかえり', style: Theme.of(context).textTheme.titleLarge),
+          Text('イベント ${record.eventCount}件・行動 ${record.choices.length}回'),
+          Text(
+            '休憩 ${result.counters.breakMinutes}分・最終残務 ${result.remainingTasks.total}件',
+          ),
+          Text(
+            result.reason == 'forcedRelief'
+                ? '残務を応援へ引き継いで終了しました。'
+                : '最終申し送りを終えました。',
+          ),
+          const SizedBox(height: 18),
+          Text('4軸評価', style: Theme.of(context).textTheme.titleLarge),
+          for (final entry in axes.entries)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(entry.value),
+              subtitle: Text(
+                '${result.axisScores[entry.key]} / 10000　評価 ${result.grades[entry.key]}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          const SizedBox(height: 12),
+          if (live && widget.controller.history.error != null)
+            Text(
+              widget.controller.history.error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          if (live) ...[
+            FilledButton(onPressed: _start, child: const Text('もう一度勤務する')),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => setState(() => page = 'home'),
+              child: const Text('ホームへ戻る'),
+            ),
+          ],
+        ],
       ),
-      Text('退勤 ${gameTime(s.timeMinutes)}'),
-      const SizedBox(height: 16),
-      FilledButton(
-        onPressed: () => setState(() => page = 'home'),
-        child: const Text('ホームへ戻る'),
+    );
+  }
+
+  Widget _history() {
+    final history = widget.controller.history;
+    return SafeArea(
+      child: ListView(
+        key: const Key('historyScroll'),
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (history.error != null)
+            Text(
+              history.error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          if (history.records.isEmpty) ...[
+            const SizedBox(height: 60),
+            const Text('まだ勤務記録がありません', textAlign: TextAlign.center),
+            const Text('最初の勤務に挑戦してみよう', textAlign: TextAlign.center),
+          ],
+          for (final record in history.records)
+            Card(
+              child: ListTile(
+                onTap: () => setState(() {
+                  selectedRecord = record;
+                  page = 'detail';
+                }),
+                title: Text(
+                  '${record.endedAtMillis == 0 ? '' : _date(record.endedAtMillis)}　${gameTime(record.result.finishTime)}',
+                ),
+                subtitle: Text('${_kind(record.result)}　${record.title}'),
+                trailing: const Icon(Icons.chevron_right),
+              ),
+            ),
+        ],
       ),
-    ],
-  );
+    );
+  }
+
+  String _date(int millis) {
+    final d = DateTime.fromMillisecondsSinceEpoch(millis);
+    return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+  }
+
+  String _kind(GameResult r) => r.reason == 'forcedRelief'
+      ? '応援終了'
+      : r.overtimeMinutes == 0
+      ? '定時'
+      : '残業';
 }
