@@ -4,12 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/models.dart';
+import 'workday_view.dart';
 
 /// Immutable display snapshot. Schema 1 deliberately does not deserialize GameState.
 class ShiftRecord {
   final String id, contentVersion, balanceVersion, title;
   final int seed, startedAtMillis, endedAtMillis, startMinutes, eventCount;
   final GameResult result;
+  final DaySummary? daySummary;
   final List<String> choices;
   const ShiftRecord({
     required this.id,
@@ -22,6 +24,7 @@ class ShiftRecord {
     required this.startMinutes,
     required this.eventCount,
     required this.result,
+    this.daySummary,
     required this.choices,
   });
 
@@ -47,6 +50,9 @@ class ShiftRecord {
       startMinutes: 510,
       eventCount: state.playedEventIds.length,
       result: state.result!,
+      daySummary: state.unifiedShift == null
+          ? null
+          : DaySummary.fromState(state),
       choices: List.unmodifiable(state.choiceHistory),
     );
   }
@@ -63,6 +69,7 @@ class ShiftRecord {
     'startMinutes': startMinutes,
     'eventCount': eventCount,
     'result': result.toJson(),
+    if (daySummary != null) 'daySummary': daySummary!.toJson(),
     'choices': choices,
   };
 
@@ -82,6 +89,9 @@ class ShiftRecord {
       startMinutes: m['startMinutes'] as int,
       eventCount: m['eventCount'] as int,
       result: GameResult.fromJson(m['result']),
+      daySummary: m['daySummary'] == null
+          ? null
+          : DaySummary.fromJson(m['daySummary']),
       choices: List<String>.from(m['choices'] as List),
     );
     if (record.id.isEmpty ||

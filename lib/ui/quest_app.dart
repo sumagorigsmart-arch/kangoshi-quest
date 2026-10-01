@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import '../application/game_controller.dart';
 import '../application/shift_history.dart';
 import '../application/shift_summary.dart';
+import '../application/workday_view.dart';
 import '../domain/models.dart';
 import '../domain/day_shift.dart';
 import 'share_bridge.dart';
@@ -14,6 +15,17 @@ import 'quest_theme.dart';
 String gameTime(int minutes) =>
     '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
 String signed(int value) => value > 0 ? '+$value' : '$value';
+String _dynamicKindLabel(String kind) => switch (kind) {
+  'call' => 'ナースコール',
+  'toileting' => '突発の排泄介助',
+  'infusion' => '点滴関連',
+  'examination' => '検査呼び出し',
+  'order' => '医師追加指示',
+  'family' => '家族対応',
+  'emergency' => '急変',
+  'admission' => '新規入院',
+  _ => 'その他',
+};
 String qualitative(String subject, int change) => change == 0
     ? '$subjectに変化なし'
     : '$subjectが${change > 0 ? '少し良くなった' : '少し悪くなった'}';
@@ -28,6 +40,7 @@ class QuestApp extends StatefulWidget {
 class _QuestAppState extends State<QuestApp> {
   String page = 'home';
   final Set<String> _handoffSelection = {};
+  int? _previousQueueCount;
   ShiftRecord? selectedRecord;
   final GlobalKey _cardKey = GlobalKey();
   @override
@@ -417,6 +430,19 @@ class _QuestAppState extends State<QuestApp> {
             .toList()
           ..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
     final pending = queue.pending;
+    final overview = QueueOverview.from(queue);
+    final previous = _previousQueueCount;
+    _previousQueueCount = overview.total;
+    final interrupted = pending
+        .where((t) => t.status == WorkTaskStatus.interrupted)
+        .toList();
+    final activeId = s.unifiedShift!.activeTaskId;
+    final active = activeId == null
+        ? null
+        : queue.tasks.where((t) => t.taskId == activeId).firstOrNull;
+    final newest = queue.tasks
+        .where((t) => t.taskId == 'dynamic-${s.unifiedShift!.interruptSerial}')
+        .firstOrNull;
     return SafeArea(
       child: _pageFrame(
         child: SingleChildScrollView(
@@ -430,7 +456,7 @@ class _QuestAppState extends State<QuestApp> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      gameTime(s.timeMinutes),
+                      clockLabel(s.timeMinutes),
                       key: const Key('unifiedClock'),
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(color: QuestColors.teal),
@@ -442,8 +468,8 @@ class _QuestAppState extends State<QuestApp> {
                     ),
                     Text(
                       status.scheduledEndReached
-                          ? '定時到達　残業 ${status.overtimeMinutes}分'
-                          : '17:00まで ${1020 - s.timeMinutes}分',
+                          ? '残業 ${durationLabel(status.overtimeMinutes)}'
+                          : '定時まで ${durationLabel(1020 - s.timeMinutes)}',
                     ),
                     const SizedBox(height: 10),
                     Wrap(
@@ -468,10 +494,17 @@ class _QuestAppState extends State<QuestApp> {
                         ),
                       ],
                     ),
-                    if (s.unifiedShift!.activeTaskId != null)
+                    Text(
+                      '残っている仕事 ${overview.total}件',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      'ケア ${overview.care} / 記録 ${overview.records} / 中断 ${overview.interrupted} / その他 ${overview.other}',
+                    ),
+                    if (previous != null && previous != overview.total)
                       Text(
-                        '中断中：${queue.tasks.firstWhere((t) => t.taskId == s.unifiedShift!.activeTaskId).title}　残り${s.unifiedShift!.activeTaskRemaining}分',
-                        key: const Key('activeTask'),
+                        '残務 $previous → ${overview.total}',
+                        key: const Key('queueChange'),
                       ),
                   ],
                 ),
@@ -507,20 +540,100 @@ class _QuestAppState extends State<QuestApp> {
                 ),
                 const SizedBox(height: 12),
               ],
-              Text('今処理するTask', style: Theme.of(context).textTheme.titleLarge),
-              if (s.unifiedShift!.notice != null)
+              if (active != null)
+                _panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        active.status == WorkTaskStatus.interrupted
+                            ? '割り込み前の仕事'
+                            : 'いま処理中の仕事',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        active.title,
+                        key: const Key('activeTask'),
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      Text(
+                        '${taskPriorityLabel(active)}・${active.interruptionCount > 0 ? '${active.interruptionCount}回中断 / ' : ''}あと ${active.remainingDuration ?? s.unifiedShift!.activeTaskRemaining}分',
+                      ),
+                    ],
+                  ),
+                ),
+              if (s.unifiedShift!.notice != null &&
+                  newest != null &&
+                  s.timeMinutes - s.unifiedShift!.lastInterruptAt <= 10)
                 Card(
-                  color: s.unifiedShift!.notice!.contains('🚨')
+                  color: newest.priority == WorkPriority.urgent
                       ? Theme.of(context).colorScheme.errorContainer
                       : Theme.of(context).colorScheme.secondaryContainer,
                   child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Text(s.unifiedShift!.notice!),
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          newest.priority == WorkPriority.urgent
+                              ? '🚨 緊急割り込み'
+                              : '割り込みが発生しました',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(newest.title),
+                        Text(s.unifiedShift!.notice!),
+                        if (active != null &&
+                            active.status == WorkTaskStatus.interrupted)
+                          Text(
+                            '${active.title}を中断・残り ${active.remainingDuration}分',
+                          ),
+                      ],
+                    ),
                   ),
                 ),
+              if (interrupted.isNotEmpty)
+                _panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '中断中 ${interrupted.length}件',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      for (final task in interrupted.take(3))
+                        Text(
+                          '${task.title}・あと ${task.remainingDuration ?? task.estimatedMinutes}分',
+                        ),
+                    ],
+                  ),
+                ),
+              if (active == null && available.isNotEmpty)
+                _panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '次に取りかかれる仕事',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        available.first.title,
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      Text(
+                        '${taskPriorityLabel(available.first)}・あと ${available.first.remainingDuration ?? available.first.estimatedMinutes}分',
+                      ),
+                      if (available.first.interruptionCount > 0)
+                        Text(
+                          '${available.first.interruptionCount}回中断・残り時間から再開',
+                        ),
+                    ],
+                  ),
+                ),
+              Text('今処理するTask', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 6),
               if (available.isEmpty) const Text('現在選べる業務はありません。次の予定を確認してください。'),
-              for (final task in available)
+              for (final task in available.take(5))
                 Card(
                   color: task.priority == WorkPriority.urgent
                       ? Theme.of(context).colorScheme.errorContainer
@@ -553,11 +666,9 @@ class _QuestAppState extends State<QuestApp> {
                           : task.title.split(' ').skip(1).join(' '),
                     ),
                     subtitle: Text(
-                      '${task.remainingDuration ?? task.estimatedMinutes}分・${task.taskType.name}・${task.priority.name}・${task.status.name}'
-                      '${task.deadline == null ? '' : '・期限 ${gameTime(task.deadline!)}'}'
-                      '${deadlineState(task, s.timeMinutes) == DeadlineState.overdue ? '・超過' : ''}'
-                      '${task.status == WorkTaskStatus.interrupted ? '・中断${task.interruptionCount}回' : ''}'
-                      '${task.taskType == WorkTaskType.documentation ? '・未記録${task.unrecordedMinutes(s.timeMinutes)}分' : ''}',
+                      '${taskPriorityLabel(task)}・${taskStatusLabel(task)}・あと ${task.remainingDuration ?? task.estimatedMinutes}分'
+                      '${task.deadline == null ? '' : '・期限 ${clockLabel(task.deadline!)}'}'
+                      '${deadlineState(task, s.timeMinutes) == DeadlineState.overdue ? '・期限超過' : ''}',
                     ),
                     trailing: IconButton(
                       tooltip: '${task.title}を処理',
@@ -568,6 +679,29 @@ class _QuestAppState extends State<QuestApp> {
                           : null,
                     ),
                   ),
+                ),
+              if (available.length > 5)
+                ExpansionTile(
+                  title: Text('ほかの仕事 ${available.length - 5}件'),
+                  children: [
+                    for (final task in available.skip(5))
+                      ListTile(
+                        key: Key('unified-${task.taskId}'),
+                        title: Text(task.title),
+                        subtitle: Text(
+                          '${taskPriorityLabel(task)}・${taskStatusLabel(task)}・あと ${task.remainingDuration ?? task.estimatedMinutes}分',
+                        ),
+                        trailing: IconButton(
+                          tooltip: '${task.title}を処理',
+                          icon: const Icon(Icons.play_arrow),
+                          onPressed: s.phase == 'taskSelection'
+                              ? () => widget.controller.completeWorkTask(
+                                  task.taskId,
+                                )
+                              : null,
+                        ),
+                      ),
+                  ],
                 ),
               if (pending.isNotEmpty && s.phase == 'taskSelection')
                 TextButton(
@@ -602,21 +736,13 @@ class _QuestAppState extends State<QuestApp> {
     final queue = s.workQueue!;
     final status = s.workStatus!;
     final view = s.unifiedShift!.exitView;
-    final transferable = queue.pending
-        .where(
-          (t) =>
-              t.taskType != WorkTaskType.documentation &&
-              !t.requiredToLeave &&
-              t.priority != WorkPriority.urgent,
-        )
-        .toList();
+    final transferable = queue.pending.where(canHandOff).toList();
     final blockers = queue.pending
         .where(
-          (t) =>
-              t.taskType != WorkTaskType.documentation &&
-              (t.requiredToLeave || t.priority == WorkPriority.urgent),
+          (t) => t.taskType != WorkTaskType.documentation && !canHandOff(t),
         )
         .toList();
+    final overview = QueueOverview.from(queue);
     final patients = {
       for (final p in s.unifiedShift!.patients) p.patientId: p.bedLabel,
     };
@@ -626,16 +752,27 @@ class _QuestAppState extends State<QuestApp> {
           padding: const EdgeInsets.all(16),
           children: [
             Text(
-              '${gameTime(s.timeMinutes)}　定時になりました',
+              '${clockLabel(s.timeMinutes)}　${s.timeMinutes == 1020 ? '定時になりました' : '退勤判断'}',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            Text('残業 ${status.overtimeMinutes}分'),
+            Text(
+              s.timeMinutes == 1020
+                  ? 'しかし、仕事は終わっていません。'
+                  : '残業 ${durationLabel(status.overtimeMinutes)}',
+            ),
             const SizedBox(height: 12),
             _panel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('今日の仕事', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    '残っている仕事 ${overview.total}件',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  Text(
+                    'ケア ${overview.care}件・記録 ${overview.records}件・中断 ${overview.interrupted}件・その他 ${overview.other}件',
+                  ),
                   Text(
                     '未処理 ${status.unfinishedTaskCount}件　未記録 ${status.unfinishedRecordCount}件',
                   ),
@@ -652,7 +789,9 @@ class _QuestAppState extends State<QuestApp> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('この仕事を残しては帰れません'),
-                    for (final task in blockers.take(5)) Text('・${task.title}'),
+                    Text('緊急 ${overview.urgent}件・中断 ${overview.interrupted}件'),
+                    for (final task in blockers.take(5))
+                      Text('・${task.title}（${taskStatusLabel(task)}）'),
                     if (s.unifiedShift!.activeTaskId != null)
                       const Text('・中断中のTaskがあります'),
                   ],
@@ -697,11 +836,19 @@ class _QuestAppState extends State<QuestApp> {
                     '${patients[task.patientId] ?? '病棟'}　${task.title}',
                   ),
                   subtitle: Text(
-                    '優先度 ${task.priority.name}・予定 ${task.scheduledAt == null ? 'なし' : gameTime(task.scheduledAt!)}'
-                    '・期限 ${task.deadline == null ? 'なし' : gameTime(task.deadline!)}'
+                    '${taskPriorityLabel(task)}・予定 ${task.scheduledAt == null ? 'なし' : clockLabel(task.scheduledAt!)}'
+                    '・期限 ${task.deadline == null ? 'なし' : clockLabel(task.deadline!)}'
                     '${deadlineState(task, s.timeMinutes) == DeadlineState.overdue ? '・期限超過' : ''}',
                   ),
                 ),
+              if (blockers.isNotEmpty) ...[
+                Text(
+                  '引き継げない仕事',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                for (final task in blockers.take(8))
+                  Text('・${task.title}（${taskStatusLabel(task)}）'),
+              ],
               FilledButton(
                 onPressed: _handoffSelection.isEmpty
                     ? null
@@ -1063,6 +1210,11 @@ class _QuestAppState extends State<QuestApp> {
 
   Widget _recordView(ShiftRecord record, {required bool live}) {
     final result = record.result;
+    final day =
+        record.daySummary ??
+        (live && widget.controller.state?.unifiedShift != null
+            ? DaySummary.fromState(widget.controller.state!)
+            : null);
     final exitLabel = switch (result.exitType) {
       'cleanExit' => '完全退勤',
       'handedOffExit' => '引き継いで退勤',
@@ -1074,7 +1226,7 @@ class _QuestAppState extends State<QuestApp> {
         ? '応援を呼んで勤務終了'
         : result.overtimeMinutes == 0
         ? '定時退勤！'
-        : '本日の退勤 ${gameTime(result.finishTime)}';
+        : '本日の退勤 ${clockLabel(result.finishTime)}';
     const axes = {
       'patient': '患者対応',
       'team': 'チーム',
@@ -1095,7 +1247,7 @@ class _QuestAppState extends State<QuestApp> {
                   const SizedBox(height: 16),
                   Text('退勤時刻', style: Theme.of(context).textTheme.titleMedium),
                   Text(
-                    gameTime(result.finishTime),
+                    clockLabel(result.finishTime),
                     style: Theme.of(context).textTheme.headlineLarge
                         ?.copyWith(fontSize: 52, color: QuestColors.teal),
                   ),
@@ -1125,12 +1277,76 @@ class _QuestAppState extends State<QuestApp> {
                   Text(
                     result.overtimeMinutes == 0
                         ? '残業時間　0分'
-                        : '残業時間　${result.overtimeMinutes}分',
+                        : '残業時間　${durationLabel(result.overtimeMinutes)}',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
               ),
             ),
+            if (day != null) ...[
+              const SizedBox(height: 14),
+              Text('今日の勤務', style: Theme.of(context).textTheme.titleLarge),
+              _panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('担当患者 ${day.patientsStart}人 → ${day.patientsEnd}人'),
+                    Text('完了 ${day.completed}件 / 引き継ぎ ${day.handedOff}件'),
+                    Text('未記録 ${day.undocumented}件 / 期限超過 ${day.overdue}件'),
+                    Text('割り込み ${day.events}件 / 中断 ${day.interruptions}回'),
+                  ],
+                ),
+              ),
+              Text('今日起きたこと', style: Theme.of(context).textTheme.titleLarge),
+              _panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final entry in day.eventCounts.entries)
+                      Text('${_dynamicKindLabel(entry.key)} ${entry.value}件'),
+                    if (day.eventCounts.isEmpty) const Text('記録されたイベントはありません'),
+                    if (day.eventCounts.values.fold<int>(0, (a, b) => a + b) <
+                        day.events)
+                      const Text('種類別はTask履歴に残った割り込み分です。'),
+                  ],
+                ),
+              ),
+              Text(
+                '今日、帰れなかった主な理由',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              _panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (day.eventCounts['admission'] != null)
+                      Text('新規入院が${day.eventCounts['admission']}件ありました'),
+                    if (day.eventCounts['emergency'] != null)
+                      Text('急変対応が${day.eventCounts['emergency']}件ありました'),
+                    if (day.events > 0) Text('${day.events}件の割り込みが発生しました'),
+                    if (day.interruptions > 0)
+                      Text('${day.interruptions}回、仕事を中断しました'),
+                    if (day.undocumented > 0)
+                      Text('未記録の仕事が${day.undocumented}件残りました'),
+                    if (day.events == 0 &&
+                        day.undocumented == 0 &&
+                        day.interruptions == 0)
+                      const Text('目立った割り込みや未記録はありませんでした'),
+                  ],
+                ),
+              ),
+              ExpansionTile(
+                title: const Text('一日のタイムライン'),
+                children: [
+                  for (final item in day.timeline)
+                    ListTile(
+                      dense: true,
+                      leading: Text(clockLabel(item.at)),
+                      title: Text(item.title),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 18),
             Text('4軸評価', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
