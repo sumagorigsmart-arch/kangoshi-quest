@@ -210,12 +210,14 @@ class ConsequenceEngine {
             .where((t) => t.taskType != WorkTaskType.documentation)
             .length;
         if (boundary == 930 && open >= 8) {
-          final source = result.tasks.firstWhere(
-            (t) => t.taskId == 'afternoon_handoff',
-          );
-          generate(source, 'phaseBoundary', '申し送り前の未完了ケア', [
-            ('未完了ケアの申し送り整理', 8, WorkPriority.normal, WorkTaskType.dynamic),
-          ]);
+          final source = result.tasks
+              .where((t) => t.taskId == 'afternoon_handoff')
+              .firstOrNull;
+          if (source != null) {
+            generate(source, 'phaseBoundary', '申し送り前の未完了ケア', [
+              ('未完了ケアの申し送り整理', 8, WorkPriority.normal, WorkTaskType.dynamic),
+            ]);
+          }
         }
         if ((boundary == 930 || boundary == 1020) &&
             result.documentationBacklog) {

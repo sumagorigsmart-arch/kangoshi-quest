@@ -157,4 +157,6 @@ seed 17 回帰では「全部やる」翌10:05／169完了／28イベント／5�
 
 進行中の新規勤務は schema v6 で連鎖、台帳、休憩中断状態を保存します。v1〜v5 は読み込み可能で、旧勤務の連鎖ルールは無効のまま続行します。履歴 schema 1 の `daySummary` 追加値は任意です。Phase 11/12 の旧 seed 17 baseline（上記3方針）は headless の旧ルールとして保持し、回帰テストも維持します。アプリの新規勤務で seed 17 の数値が変わる理由は、後回しの仕事から生じる追加 Task と休憩条件です。
 
-QA は OneDrive の既存 `build/unit_test_assets` がロックされたため、同一ソースを一時ディレクトリにコピーして Flutter test、analyze、Web release build を実行しました。
+食事介助と食後内服の依存判定は患者別 Task に適用し、失禁対応後の更衣・寝具交換・記録は対応完了直後に Queue へ反映します。業務連鎖の通知は専用カードに表示し、割り込み通知とは分けます。
+
+Phase 13 最終 QA は元の作業ツリーで Flutter test 118件、`flutter analyze`（問題なし）、正式50イベント validator、Web release build を実行しました。

@@ -1059,6 +1059,17 @@ List<WorkTask> availableTasks(
       return task.scheduledAt == null || task.scheduledAt! <= now;
     }
     if (task.patientId != null) {
+      if (strictDependencies && task.taskId.endsWith('-lunch-meds')) {
+        final meal = queue.tasks
+            .where(
+              (t) =>
+                  t.patientId == task.patientId && t.taskId.endsWith('-meal'),
+            )
+            .firstOrNull;
+        if (meal != null && meal.status != WorkTaskStatus.completed) {
+          return false;
+        }
+      }
       return now >= (task.scheduledAt ?? 510) &&
           (queue.tasks
                   .firstWhere((t) => t.taskId == 'morning_handoff')
@@ -1072,17 +1083,6 @@ List<WorkTask> availableTasks(
             (!strictDependencies || breakBlockReason(queue, now) == null) &&
             queue.tasks.firstWhere((t) => t.taskId == 'lunch_clear').status ==
                 WorkTaskStatus.completed;
-      }
-      if (strictDependencies && task.taskId.endsWith('-lunch-meds')) {
-        final meal = queue.tasks
-            .where(
-              (t) =>
-                  t.patientId == task.patientId && t.taskId.endsWith('-meal'),
-            )
-            .firstOrNull;
-        if (meal != null && meal.status != WorkTaskStatus.completed) {
-          return false;
-        }
       }
       return now >= (task.scheduledAt ?? 510);
     }

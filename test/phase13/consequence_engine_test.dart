@@ -196,4 +196,68 @@ void main() {
     ]);
     expect(breakBlockReason(queue, 760), contains('緊急'));
   });
+
+  test('meal assistance blocks the same patient’s lunch medication', () {
+    final patient = patients.firstWhere((p) => p.patientId == 'p302a');
+    var queue = generatePatientRoutineTasks([patient]);
+    queue = queue.complete('morning_handoff', 530);
+    expect(
+      availableTasks(
+        queue,
+        760,
+        strictDependencies: true,
+      ).any((t) => t.taskId == 'p302a-lunch-meds'),
+      isFalse,
+    );
+    queue = queue.complete('p302a-meal', 765);
+    expect(
+      availableTasks(
+        queue,
+        765,
+        strictDependencies: true,
+      ).any((t) => t.taskId == 'p302a-lunch-meds'),
+      isTrue,
+    );
+  });
+
+  test('finishing incontinence care adds follow-up before another action', () {
+    final initial = startUnifiedShift(
+      GameState.initial('care-chain', 3, 'test', 'test'),
+      enableConsequences: true,
+    );
+    final first = ConsequenceEngine.evaluate(
+      queue: initial.workQueue!,
+      patients: patients,
+      previous: const [],
+      ledger: const [],
+      seed: 3,
+      before: 679,
+      now: 680,
+    );
+    final source = first.consequences.firstWhere(
+      (c) => c.sourceTaskId == 'p302a-am-toilet',
+    );
+    final queue = first.queue.complete('morning_handoff', 530);
+    final state = initial.copyWith(
+      timeMinutes: 680,
+      workQueue: queue,
+      unifiedShift: initial.unifiedShift!.copyWith(
+        consequences: first.consequences,
+        eventLedger: first.events,
+      ),
+    );
+    final result = performUnifiedTask(
+      state,
+      source.generatedTaskIds.first,
+      allowInterrupt: false,
+    ).state;
+    expect(
+      result.workQueue!.tasks.any((t) => t.title.contains('寝具交換')),
+      isTrue,
+    );
+    expect(
+      result.unifiedShift!.consequences.length,
+      greaterThan(first.consequences.length),
+    );
+  });
 }

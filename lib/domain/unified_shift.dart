@@ -69,9 +69,6 @@ GameState advanceUnifiedTime(
         unifiedShift: shift.copyWith(
           consequences: [...shift.consequences, ...decision.consequences],
           eventLedger: [...shift.eventLedger, ...decision.events],
-          notice: decision.consequences.isEmpty
-              ? null
-              : '${decision.consequences.last.reason} → ${decision.queue.tasks.firstWhere((t) => t.taskId == decision.consequences.last.generatedTaskIds.first).title}が追加されました',
         ),
       );
     }
@@ -280,6 +277,34 @@ TaskAction performUnifiedTask(
           (taskId == 'break' ? duration : 0),
     ),
   );
+  if (shift.consequencesEnabled) {
+    // A completed consequence task can create its follow-up immediately.
+    // Time-boundary decisions have already been evaluated minute by minute.
+    final followUp = ConsequenceEngine.evaluate(
+      queue: current.workQueue!,
+      patients: current.unifiedShift!.patients,
+      previous: current.unifiedShift!.consequences,
+      ledger: current.unifiedShift!.eventLedger,
+      seed: current.seed,
+      before: current.timeMinutes,
+      now: current.timeMinutes,
+    );
+    if (followUp.consequences.isNotEmpty || followUp.events.isNotEmpty) {
+      current = current.copyWith(
+        workQueue: followUp.queue,
+        unifiedShift: current.unifiedShift!.copyWith(
+          consequences: [
+            ...current.unifiedShift!.consequences,
+            ...followUp.consequences,
+          ],
+          eventLedger: [
+            ...current.unifiedShift!.eventLedger,
+            ...followUp.events,
+          ],
+        ),
+      );
+    }
+  }
   return TaskAction(current, completed: true);
 }
 
