@@ -13,7 +13,14 @@ enum ShiftPhase {
 
 enum WorkTaskType { routine, dynamic, documentation }
 
-enum WorkTaskStatus { pending, completed, handedOff, expired }
+enum WorkTaskStatus {
+  pending,
+  inProgress,
+  interrupted,
+  completed,
+  handedOff,
+  expired,
+}
 
 enum WorkPriority { urgent, high, normal, low }
 
@@ -156,6 +163,8 @@ class UnifiedShiftState {
   final String? activeTaskId;
   final int activeTaskRemaining;
   final String exitView;
+  final int lastEventMinute;
+  final String? notice;
   const UnifiedShiftState({
     required this.patients,
     this.interruptSerial = 0,
@@ -163,6 +172,8 @@ class UnifiedShiftState {
     this.activeTaskId,
     this.activeTaskRemaining = 0,
     this.exitView = 'work',
+    this.lastEventMinute = 510,
+    this.notice,
   });
   UnifiedShiftState copyWith({
     List<Patient>? patients,
@@ -172,6 +183,8 @@ class UnifiedShiftState {
     int? activeTaskRemaining,
     bool clearActive = false,
     String? exitView,
+    int? lastEventMinute,
+    String? notice,
   }) => UnifiedShiftState(
     patients: patients ?? this.patients,
     interruptSerial: interruptSerial ?? this.interruptSerial,
@@ -181,6 +194,8 @@ class UnifiedShiftState {
         ? 0
         : activeTaskRemaining ?? this.activeTaskRemaining,
     exitView: exitView ?? this.exitView,
+    lastEventMinute: lastEventMinute ?? this.lastEventMinute,
+    notice: notice ?? this.notice,
   );
   factory UnifiedShiftState.fromJson(dynamic raw) {
     final m = Map<String, dynamic>.from(raw as Map);
@@ -193,6 +208,8 @@ class UnifiedShiftState {
       activeTaskId: m['activeTaskId'] as String?,
       activeTaskRemaining: m['activeTaskRemaining'] as int? ?? 0,
       exitView: m['exitView'] as String? ?? 'work',
+      lastEventMinute: m['lastEventMinute'] as int? ?? 510,
+      notice: m['notice'] as String?,
     );
   }
   Map<String, dynamic> toJson() => {
@@ -202,6 +219,8 @@ class UnifiedShiftState {
     'activeTaskId': activeTaskId,
     'activeTaskRemaining': activeTaskRemaining,
     'exitView': exitView,
+    'lastEventMinute': lastEventMinute,
+    'notice': notice,
   };
 }
 
@@ -257,6 +276,9 @@ class WorkTask {
   final String? sourceEventId, patientId, parentTaskId, routineCategory;
   final ShiftPhase? shiftPhase;
   final bool requiredToLeave;
+  final int interruptionCount, chainDepth;
+  final int? remainingDuration, interruptedAt, resumedAt;
+  final String? sourceTaskId;
   const WorkTask({
     required this.taskId,
     required this.title,
@@ -275,6 +297,12 @@ class WorkTask {
     this.routineCategory,
     this.shiftPhase,
     this.requiredToLeave = true,
+    this.interruptionCount = 0,
+    this.remainingDuration,
+    this.interruptedAt,
+    this.resumedAt,
+    this.sourceTaskId,
+    this.chainDepth = 0,
   });
   WorkTask copyWith({
     WorkTaskStatus? status,
@@ -282,6 +310,10 @@ class WorkTask {
     int? scheduledAt,
     int? handedOffAt,
     bool? requiredToLeave,
+    int? interruptionCount,
+    int? remainingDuration,
+    int? interruptedAt,
+    int? resumedAt,
   }) => WorkTask(
     taskId: taskId,
     title: title,
@@ -300,6 +332,12 @@ class WorkTask {
     routineCategory: routineCategory,
     shiftPhase: shiftPhase,
     requiredToLeave: requiredToLeave ?? this.requiredToLeave,
+    interruptionCount: interruptionCount ?? this.interruptionCount,
+    remainingDuration: remainingDuration ?? this.remainingDuration,
+    interruptedAt: interruptedAt ?? this.interruptedAt,
+    resumedAt: resumedAt ?? this.resumedAt,
+    sourceTaskId: sourceTaskId,
+    chainDepth: chainDepth,
   );
   factory WorkTask.fromJson(dynamic raw) {
     final m = Map<String, dynamic>.from(raw as Map);
@@ -323,6 +361,12 @@ class WorkTask {
           ? null
           : ShiftPhase.values.byName(m['shiftPhase'] as String),
       requiredToLeave: m['requiredToLeave'] as bool? ?? true,
+      interruptionCount: m['interruptionCount'] as int? ?? 0,
+      remainingDuration: m['remainingDuration'] as int?,
+      interruptedAt: m['interruptedAt'] as int?,
+      resumedAt: m['resumedAt'] as int?,
+      sourceTaskId: m['sourceTaskId'] as String?,
+      chainDepth: m['chainDepth'] as int? ?? 0,
     );
   }
   Map<String, dynamic> toJson() => {
@@ -343,6 +387,12 @@ class WorkTask {
     'routineCategory': routineCategory,
     'shiftPhase': shiftPhase?.name,
     'requiredToLeave': requiredToLeave,
+    'interruptionCount': interruptionCount,
+    'remainingDuration': remainingDuration,
+    'interruptedAt': interruptedAt,
+    'resumedAt': resumedAt,
+    'sourceTaskId': sourceTaskId,
+    'chainDepth': chainDepth,
   };
   int unrecordedMinutes(int now) =>
       taskType == WorkTaskType.documentation && status == WorkTaskStatus.pending
@@ -371,8 +421,15 @@ class TaskQueue {
   TaskQueue add(WorkTask task) => TaskQueue([...tasks, task]);
   TaskQueue replace(WorkTask task) =>
       TaskQueue(tasks.map((t) => t.taskId == task.taskId ? task : t));
-  List<WorkTask> get pending =>
-      _sorted(tasks.where((t) => t.status == WorkTaskStatus.pending));
+  List<WorkTask> get pending => _sorted(
+    tasks.where(
+      (t) => {
+        WorkTaskStatus.pending,
+        WorkTaskStatus.inProgress,
+        WorkTaskStatus.interrupted,
+      }.contains(t.status),
+    ),
+  );
   List<WorkTask> get completed =>
       tasks.where((t) => t.status == WorkTaskStatus.completed).toList();
   List<WorkTask> get handedOff =>
@@ -428,7 +485,11 @@ class TaskQueue {
       });
   TaskQueue complete(String id, int now) {
     final task = tasks.firstWhere((t) => t.taskId == id);
-    if (task.status != WorkTaskStatus.pending) {
+    if (!{
+      WorkTaskStatus.pending,
+      WorkTaskStatus.inProgress,
+      WorkTaskStatus.interrupted,
+    }.contains(task.status)) {
       throw StateError('Task already handled');
     }
     final result = tasks
@@ -437,7 +498,7 @@ class TaskQueue {
               t.taskId == id ? t.copyWith(status: WorkTaskStatus.completed) : t,
         )
         .toList();
-    if (task.documentationMinutes > 0) {
+    if (task.documentationMinutes > 0 && task.chainDepth < 3) {
       result.add(
         WorkTask(
           taskId: '$id-documentation',
@@ -450,8 +511,42 @@ class TaskQueue {
           patientId: task.patientId,
           deadline: now + 120,
           requiredToLeave: false,
+          sourceTaskId: id,
+          chainDepth: task.chainDepth + 1,
         ),
       );
+    }
+    if (task.chainDepth < 2 &&
+        {'call', 'order', 'emergency'}.contains(task.sourceEventId)) {
+      final kind = task.sourceEventId!;
+      // Only the root task expands; children may create a final record.
+      if (task.sourceTaskId == null) {
+        result.add(
+          WorkTask(
+            taskId: '$id-followup',
+            title:
+                '${task.title} ${kind == 'call'
+                    ? '排泄介助'
+                    : kind == 'order'
+                    ? '追加対応'
+                    : '状態観察'}',
+            patientId: task.patientId,
+            createdAt: now,
+            scheduledAt: now,
+            deadline: now + (kind == 'emergency' ? 15 : 45),
+            estimatedMinutes: kind == 'emergency' ? 9 : 8,
+            priority: kind == 'emergency'
+                ? WorkPriority.urgent
+                : WorkPriority.high,
+            taskType: WorkTaskType.dynamic,
+            sourceEventId: kind,
+            sourceTaskId: id,
+            chainDepth: task.chainDepth + 1,
+            documentationMinutes: 4,
+            requiredToLeave: kind == 'emergency',
+          ),
+        );
+      }
     }
     return TaskQueue(result);
   }
@@ -750,7 +845,11 @@ class ShiftWorkStatus {
       end,
       end &&
           activeTaskId == null &&
-          !pending.any((t) => t.taskType != WorkTaskType.documentation),
+          !pending.any(
+            (t) =>
+                t.taskType != WorkTaskType.documentation ||
+                t.status == WorkTaskStatus.interrupted,
+          ),
       (now - config.finish).clamp(0, 99999),
       pending.length,
       queue.documentationCount,

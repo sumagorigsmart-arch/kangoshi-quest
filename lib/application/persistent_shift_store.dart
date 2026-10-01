@@ -46,10 +46,19 @@ class PersistentShiftStore implements ShiftStore {
     if (data['schemaVersion'] != 1 &&
         data['schemaVersion'] != 2 &&
         data['schemaVersion'] != 3 &&
-        data['schemaVersion'] != 4) {
+        data['schemaVersion'] != 4 &&
+        data['schemaVersion'] != 5) {
       throw const FormatException('schema');
     }
     var state = GameState.fromJson(data['state']);
+    if (data['schemaVersion'] == 4 && state.unifiedShift != null) {
+      state = state.copyWith(
+        unifiedShift: state.unifiedShift!.copyWith(
+          lastEventMinute: state.timeMinutes,
+        ),
+      );
+      data['state'] = state.toJson();
+    }
     if (data['schemaVersion'] == 3 &&
         state.unifiedShift != null &&
         state.workQueue != null) {
@@ -88,7 +97,8 @@ class PersistentShiftStore implements ShiftStore {
         (state.phase == 'taskSelection' && state.unifiedShift == null) ||
         (state.unifiedShift != null &&
             (state.workQueue == null ||
-                state.unifiedShift!.patients.length != 6)) ||
+                (state.unifiedShift!.patients.length != 6 &&
+                    state.unifiedShift!.patients.length != 7))) ||
         (state.phase == 'showingOutcome' &&
             (state.currentOutcomeId == null || state.currentOutcome == null)) ||
         (state.phase == 'completed' && state.result == null) ||
@@ -202,7 +212,7 @@ class PersistentShiftStore implements ShiftStore {
     _current = state;
     _outcomeView = outcomeView;
     final raw = jsonEncode({
-      'schemaVersion': state.unifiedShift == null ? 2 : 4,
+      'schemaVersion': state.unifiedShift == null ? 2 : 5,
       'startedAtMillis': _startedAtMillis,
       'state': state.toJson(),
       'outcomeView': outcomeView == null

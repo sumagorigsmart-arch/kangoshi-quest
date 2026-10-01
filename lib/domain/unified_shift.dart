@@ -1,3 +1,4 @@
+import 'dynamic_events.dart';
 import 'day_shift.dart';
 import 'models.dart';
 
@@ -82,122 +83,53 @@ GameState startUnifiedShift(GameState base) {
   );
 }
 
-/// Every roll is deterministic from GameState.rngState, including a no-interrupt roll.
+/// Every elapsed minute is rolled once from the saved RNG state.
 InterruptDecision rollInterrupt(
   GameState state, {
   bool force = false,
   List<EventDefinition> events = const [],
 }) {
-  final shift = state.unifiedShift;
-  if (shift == null || state.workQueue == null) {
-    return InterruptDecision(state, null);
-  }
-  final random = nextShiftRandom(state.rngState);
-  final now = state.timeMinutes;
-  final infusion = shift.patients.where((p) => p.hasInfusion).length;
-  final assisted = shift.patients
-      .where((p) => p.adl != AdlLevel.independent)
-      .length;
-  var chance = 18 + infusion * 3 + assisted * 2;
-  if (now >= 690 && now < 780) chance += 10;
-  if (now >= 740 && now < 790) chance += 8;
-  if (now >= 910 && now < 930) chance += 10;
-  if (now >= 1020) chance = 12;
-  if (!force && random % 100 >= chance) {
-    return InterruptDecision(state.copyWith(rngState: random), null);
-  }
-  final serial = shift.interruptSerial + 1;
-  final patient = shift.patients[(random >>> 8) % shift.patients.length];
-  final kinds = <String>[
-    'ナースコール',
-    'トイレ介助',
-    '点滴終了',
-    '輸液ポンプアラーム',
-    '患者から質問',
-    '家族から質問',
-    '医師からの指示',
-    '検査室から呼び出し',
-    'リハビリから確認',
-    '薬剤部から連絡',
-    '転倒リスク対応',
-    '急な処置',
-    '入院連絡',
-    '同僚から応援依頼',
-    '患者状態変化',
-  ];
-  var index = (random >>> 16) % kinds.length;
-  if (patient.hasInfusion && serial % 3 == 0) index = 2 + serial % 2;
-  if (patient.needsToileting && serial % 4 == 0) index = 1;
-  if (now >= 690 && now < 780 && serial % 3 == 1) index = 1;
-  final title = kinds[index];
-  final urgent = index == 10 || index == 14;
-  final task = WorkTask(
-    taskId: 'interrupt-$serial',
-    title: '${patient.bedLabel} $title',
-    patientId: patient.patientId,
-    createdAt: now,
-    scheduledAt: now,
-    deadline: now + (urgent ? 10 : 30),
-    estimatedMinutes: urgent ? 12 : 4 + (random >>> 24) % 10,
-    priority: urgent ? WorkPriority.urgent : WorkPriority.high,
-    taskType: WorkTaskType.dynamic,
-    documentationMinutes: urgent ? 6 : 3,
-    requiredToLeave: urgent,
-  );
-  var result = state.copyWith(
-    rngState: random,
-    unifiedShift: shift.copyWith(interruptSerial: serial, lastInterruptAt: now),
-    workQueue: state.workQueue!.add(task),
-    counters: state.counters.add(callCount: index == 0 ? 1 : 0),
-  );
-  // Official event choices are surfaced periodically. Their selected outcome is
-  // translated through EventTaskAdapter rather than the legacy aggregate counter.
-  if (events.isNotEmpty && serial % 4 == 0 && now < 1020) {
+  final before = state.unifiedShift?.interruptSerial ?? 0;
+  var next = DynamicEventEngine.advance(state, force: force);
+  final serial = next.unifiedShift?.interruptSerial ?? before;
+  if (serial != before &&
+      serial % 4 == 0 &&
+      events.isNotEmpty &&
+      next.timeMinutes < 1020 &&
+      next.phase == 'taskSelection') {
     final options = events
         .where(
           (e) =>
               mappedEventTasks.containsKey(e.eventId) &&
-              now >= e.minTime &&
-              now <= e.maxTime &&
-              !result.playedEventIds.contains(e.eventId) &&
-              e.conditions.every((c) => c.matches(result)),
+              next.timeMinutes >= e.minTime &&
+              next.timeMinutes <= e.maxTime &&
+              !next.playedEventIds.contains(e.eventId) &&
+              e.conditions.every((c) => c.matches(next)),
         )
         .toList();
     if (options.isNotEmpty) {
-      final weights = options
-          .map(
-            (e) =>
-                e.weight *
-                e.weightModifiers.fold<double>(
-                  1,
-                  (w, m) => w * m.apply(result),
-                ),
-          )
-          .toList();
-      var target =
-          random / 4294967296 * weights.fold<double>(0, (a, b) => a + b);
-      var event = options.last;
-      for (var i = 0; i < options.length; i++) {
-        target -= weights[i];
-        if (target < 0) {
-          event = options[i];
-          break;
-        }
-      }
-      result = result.copyWith(
-        phase: 'awaitingChoice',
-        counters: result.counters.add(
-          callCount: event.onAppear['callCount'] ?? 0,
-          admissionCount: event.onAppear['admissionCount'] ?? 0,
-          acuteChangeCount: event.onAppear['acuteChangeCount'] ?? 0,
+      final event = options[next.rngState % options.length];
+      // The official choice replaces this event's work instead of adding a
+      // second workload for the same interruption.
+      final id = 'dynamic-$serial';
+      final queue = TaskQueue(
+        next.workQueue!.tasks.where(
+          (t) => t.taskId != id && t.sourceTaskId != id,
         ),
+      );
+      next = next.copyWith(
+        workQueue: queue,
+        phase: 'awaitingChoice',
         currentEventId: event.eventId,
         eventInstanceId: '${state.runId}-event-$serial',
         playedEventIds: [...state.playedEventIds, event.eventId],
       );
     }
   }
-  return InterruptDecision(result, task.title);
+  return InterruptDecision(
+    next,
+    serial == before ? null : next.unifiedShift?.notice,
+  );
 }
 
 class TaskAction {
@@ -228,52 +160,77 @@ TaskAction performUnifiedTask(
     throw StateError('Task unavailable');
   }
   final task = queue.tasks.firstWhere((t) => t.taskId == taskId);
-  final rng = nextShiftRandom(state.rngState);
-  final remaining = shift.activeTaskId == taskId
-      ? shift.activeTaskRemaining
-      : task.estimatedMinutes + (rng % 4) - 1;
-  final lateMinutes =
-      deadlineState(task, state.timeMinutes) == DeadlineState.overdue ? 4 : 0;
-  final duration = (remaining < 1 ? 1 : remaining) + lateMinutes;
-  if (allowInterrupt && duration >= 4 && shift.activeTaskId == null) {
-    final midway = (duration / 2).floor();
-    final advanced = advanceUnifiedTime(state, midway);
-    final partial = advanced.copyWith(
-      rngState: rng,
-      unifiedShift: advanced.unifiedShift!.copyWith(
-        activeTaskId: taskId,
-        activeTaskRemaining: duration - midway,
+  final suspendedId = shift.activeTaskId != taskId ? shift.activeTaskId : null;
+  final suspendedRemaining = suspendedId == null
+      ? 0
+      : shift.activeTaskRemaining;
+  final continuing =
+      task.status == WorkTaskStatus.interrupted || shift.activeTaskId == taskId;
+  final duration = continuing
+      ? (task.remainingDuration ?? shift.activeTaskRemaining)
+      : task.estimatedMinutes +
+            (nextShiftRandom(state.rngState) % 4) -
+            1 +
+            (deadlineState(task, state.timeMinutes) == DeadlineState.overdue
+                ? 4
+                : 0);
+  var current = state.copyWith(
+    workQueue: queue.replace(
+      task.copyWith(
+        status: WorkTaskStatus.inProgress,
+        remainingDuration: duration < 1 ? 1 : duration,
+        resumedAt: continuing ? state.timeMinutes : null,
+      ),
+    ),
+    unifiedShift: shift.copyWith(
+      activeTaskId: taskId,
+      activeTaskRemaining: duration < 1 ? 1 : duration,
+    ),
+  );
+  for (var left = duration < 1 ? 1 : duration; left > 0; left--) {
+    current = advanceUnifiedTime(current, 1);
+    final active = current.workQueue!.tasks.firstWhere(
+      (t) => t.taskId == taskId,
+    );
+    current = current.copyWith(
+      workQueue: current.workQueue!.replace(
+        active.copyWith(remainingDuration: left - 1),
+      ),
+      unifiedShift: current.unifiedShift!.copyWith(
+        activeTaskRemaining: left - 1,
       ),
     );
-    final decision = rollInterrupt(partial, events: events);
-    if (decision.message != null) {
-      return TaskAction(decision.state, interrupted: true);
+    if (allowInterrupt) {
+      final before = current.unifiedShift!.interruptSerial;
+      current = rollInterrupt(current, events: events).state;
+      if (current.unifiedShift!.interruptSerial != before &&
+          current.workQueue!.tasks
+                  .firstWhere((t) => t.taskId == taskId)
+                  .status ==
+              WorkTaskStatus.interrupted) {
+        return TaskAction(current, interrupted: true);
+      }
     }
   }
-  final now = state.timeMinutes + duration;
-  final done = queue.complete(taskId, now);
+  final done = current.workQueue!.complete(taskId, current.timeMinutes);
   final completed = TaskState(
     task.taskType == WorkTaskType.documentation ? 1 : 0,
     task.taskType == WorkTaskType.dynamic ? 1 : 0,
     task.taskType == WorkTaskType.routine ? 1 : 0,
   );
-  final next = advanceUnifiedTime(state, duration).copyWith(
-    rngState: rng,
+  current = current.copyWith(
     workQueue: done,
-    counters: state.counters.add(
+    counters: current.counters.add(
       completed: completed,
       breakMinutes: task.taskId == 'break' ? duration : 0,
     ),
-    unifiedShift:
-        (state.timeMinutes < 1020 && now >= 1020
-                ? shift.copyWith(exitView: 'decision')
-                : shift)
-            .copyWith(clearActive: shift.activeTaskId == taskId),
+    unifiedShift: current.unifiedShift!.copyWith(
+      clearActive: suspendedId == null,
+      activeTaskId: suspendedId,
+      activeTaskRemaining: suspendedRemaining,
+    ),
   );
-  final decision = allowInterrupt
-      ? rollInterrupt(next, events: events)
-      : InterruptDecision(next, null);
-  return TaskAction(decision.state, completed: true);
+  return TaskAction(current, completed: true);
 }
 
 /// The old outcome counters are interpreted as commands, never added to the
@@ -292,11 +249,16 @@ class EventTaskAdapter {
     final title = mappedEventTasks[event.eventId] ?? event.title;
     void completeExisting(WorkTaskType type, int count) {
       final candidates =
-          result.pending.where((t) => t.taskType == type).toList()..sort(
-            (a, b) => (a.patientId == patient.patientId ? 0 : 1).compareTo(
-              b.patientId == patient.patientId ? 0 : 1,
-            ),
-          );
+          result.pending
+              .where(
+                (t) => t.taskType == type && t.status == WorkTaskStatus.pending,
+              )
+              .toList()
+            ..sort(
+              (a, b) => (a.patientId == patient.patientId ? 0 : 1).compareTo(
+                b.patientId == patient.patientId ? 0 : 1,
+              ),
+            );
       for (final task in candidates.take(count)) {
         result = result.complete(task.taskId, now);
       }

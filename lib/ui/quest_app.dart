@@ -508,10 +508,26 @@ class _QuestAppState extends State<QuestApp> {
                 const SizedBox(height: 12),
               ],
               Text('今処理するTask', style: Theme.of(context).textTheme.titleLarge),
+              if (s.unifiedShift!.notice != null)
+                Card(
+                  color: s.unifiedShift!.notice!.contains('🚨')
+                      ? Theme.of(context).colorScheme.errorContainer
+                      : Theme.of(context).colorScheme.secondaryContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Text(s.unifiedShift!.notice!),
+                  ),
+                ),
               const SizedBox(height: 6),
               if (available.isEmpty) const Text('現在選べる業務はありません。次の予定を確認してください。'),
               for (final task in available)
                 Card(
+                  color: task.priority == WorkPriority.urgent
+                      ? Theme.of(context).colorScheme.errorContainer
+                      : deadlineState(task, s.timeMinutes) ==
+                            DeadlineState.overdue
+                      ? Theme.of(context).colorScheme.tertiaryContainer
+                      : null,
                   child: ListTile(
                     key: Key('unified-${task.taskId}'),
                     leading: task.patientId == null
@@ -537,9 +553,10 @@ class _QuestAppState extends State<QuestApp> {
                           : task.title.split(' ').skip(1).join(' '),
                     ),
                     subtitle: Text(
-                      '${task.estimatedMinutes}分・${task.priority.name}'
+                      '${task.remainingDuration ?? task.estimatedMinutes}分・${task.taskType.name}・${task.priority.name}・${task.status.name}'
                       '${task.deadline == null ? '' : '・期限 ${gameTime(task.deadline!)}'}'
                       '${deadlineState(task, s.timeMinutes) == DeadlineState.overdue ? '・超過' : ''}'
+                      '${task.status == WorkTaskStatus.interrupted ? '・中断${task.interruptionCount}回' : ''}'
                       '${task.taskType == WorkTaskType.documentation ? '・未記録${task.unrecordedMinutes(s.timeMinutes)}分' : ''}',
                     ),
                     trailing: IconButton(
