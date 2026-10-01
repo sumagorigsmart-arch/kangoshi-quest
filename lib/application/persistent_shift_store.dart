@@ -47,7 +47,8 @@ class PersistentShiftStore implements ShiftStore {
         data['schemaVersion'] != 2 &&
         data['schemaVersion'] != 3 &&
         data['schemaVersion'] != 4 &&
-        data['schemaVersion'] != 5) {
+        data['schemaVersion'] != 5 &&
+        data['schemaVersion'] != 6) {
       throw const FormatException('schema');
     }
     var state = GameState.fromJson(data['state']);
@@ -212,7 +213,11 @@ class PersistentShiftStore implements ShiftStore {
     _current = state;
     _outcomeView = outcomeView;
     final raw = jsonEncode({
-      'schemaVersion': state.unifiedShift == null ? 2 : 5,
+      'schemaVersion': state.unifiedShift == null
+          ? 2
+          : state.unifiedShift!.consequencesEnabled
+          ? 6
+          : 5,
       'startedAtMillis': _startedAtMillis,
       'state': state.toJson(),
       'outcomeView': outcomeView == null

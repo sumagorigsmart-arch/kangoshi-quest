@@ -30,6 +30,92 @@ enum PatientSeverity { stable, watch, high }
 
 enum AdlLevel { independent, partialAssist, fullAssist }
 
+class TaskConsequence {
+  final String id, sourceTaskId, triggerType, reason, severity;
+  final String? patientId;
+  final int triggeredAt, chainDepth;
+  final List<String> generatedTaskIds;
+  const TaskConsequence({
+    required this.id,
+    required this.sourceTaskId,
+    required this.patientId,
+    required this.triggerType,
+    required this.triggeredAt,
+    required this.reason,
+    required this.generatedTaskIds,
+    required this.severity,
+    required this.chainDepth,
+  });
+  factory TaskConsequence.fromJson(dynamic raw) {
+    final m = Map<String, dynamic>.from(raw as Map);
+    return TaskConsequence(
+      id: m['id'],
+      sourceTaskId: m['sourceTaskId'],
+      patientId: m['patientId'],
+      triggerType: m['triggerType'],
+      triggeredAt: m['triggeredAt'],
+      reason: m['reason'],
+      generatedTaskIds: List<String>.from(m['generatedTaskIds']),
+      severity: m['severity'],
+      chainDepth: m['chainDepth'],
+    );
+  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'sourceTaskId': sourceTaskId,
+    'patientId': patientId,
+    'triggerType': triggerType,
+    'triggeredAt': triggeredAt,
+    'reason': reason,
+    'generatedTaskIds': generatedTaskIds,
+    'severity': severity,
+    'chainDepth': chainDepth,
+  };
+}
+
+class ShiftEventLedgerEntry {
+  final String eventId, eventType;
+  final String? patientId, sourceTaskId, parentEventId;
+  final int occurredAt, chainDepth;
+  final bool isEmergency, wasInterruption;
+  const ShiftEventLedgerEntry({
+    required this.eventId,
+    required this.eventType,
+    this.patientId,
+    required this.occurredAt,
+    this.sourceTaskId,
+    this.parentEventId,
+    this.chainDepth = 0,
+    this.isEmergency = false,
+    this.wasInterruption = false,
+  });
+  factory ShiftEventLedgerEntry.fromJson(dynamic raw) {
+    final m = Map<String, dynamic>.from(raw as Map);
+    return ShiftEventLedgerEntry(
+      eventId: m['eventId'],
+      eventType: m['eventType'],
+      patientId: m['patientId'],
+      occurredAt: m['occurredAt'],
+      sourceTaskId: m['sourceTaskId'],
+      parentEventId: m['parentEventId'],
+      chainDepth: m['chainDepth'] ?? 0,
+      isEmergency: m['isEmergency'] ?? false,
+      wasInterruption: m['wasInterruption'] ?? false,
+    );
+  }
+  Map<String, dynamic> toJson() => {
+    'eventId': eventId,
+    'eventType': eventType,
+    'patientId': patientId,
+    'occurredAt': occurredAt,
+    'sourceTaskId': sourceTaskId,
+    'parentEventId': parentEventId,
+    'chainDepth': chainDepth,
+    'isEmergency': isEmergency,
+    'wasInterruption': wasInterruption,
+  };
+}
+
 class Patient {
   final String patientId, bedLabel;
   final PatientSeverity severity;
@@ -165,6 +251,11 @@ class UnifiedShiftState {
   final String exitView;
   final int lastEventMinute;
   final String? notice;
+  final bool consequencesEnabled;
+  final List<TaskConsequence> consequences;
+  final List<ShiftEventLedgerEntry> eventLedger;
+  final int interruptedBreakCount;
+  final int breakMinutesTaken;
   const UnifiedShiftState({
     required this.patients,
     this.interruptSerial = 0,
@@ -174,6 +265,11 @@ class UnifiedShiftState {
     this.exitView = 'work',
     this.lastEventMinute = 510,
     this.notice,
+    this.consequencesEnabled = false,
+    this.consequences = const [],
+    this.eventLedger = const [],
+    this.interruptedBreakCount = 0,
+    this.breakMinutesTaken = 0,
   });
   UnifiedShiftState copyWith({
     List<Patient>? patients,
@@ -185,6 +281,10 @@ class UnifiedShiftState {
     String? exitView,
     int? lastEventMinute,
     String? notice,
+    List<TaskConsequence>? consequences,
+    List<ShiftEventLedgerEntry>? eventLedger,
+    int? interruptedBreakCount,
+    int? breakMinutesTaken,
   }) => UnifiedShiftState(
     patients: patients ?? this.patients,
     interruptSerial: interruptSerial ?? this.interruptSerial,
@@ -196,6 +296,11 @@ class UnifiedShiftState {
     exitView: exitView ?? this.exitView,
     lastEventMinute: lastEventMinute ?? this.lastEventMinute,
     notice: notice ?? this.notice,
+    consequencesEnabled: consequencesEnabled,
+    consequences: List.unmodifiable(consequences ?? this.consequences),
+    eventLedger: List.unmodifiable(eventLedger ?? this.eventLedger),
+    interruptedBreakCount: interruptedBreakCount ?? this.interruptedBreakCount,
+    breakMinutesTaken: breakMinutesTaken ?? this.breakMinutesTaken,
   );
   factory UnifiedShiftState.fromJson(dynamic raw) {
     final m = Map<String, dynamic>.from(raw as Map);
@@ -210,6 +315,17 @@ class UnifiedShiftState {
       exitView: m['exitView'] as String? ?? 'work',
       lastEventMinute: m['lastEventMinute'] as int? ?? 510,
       notice: m['notice'] as String?,
+      consequencesEnabled: m['consequencesEnabled'] as bool? ?? false,
+      consequences: List.unmodifiable(
+        (m['consequences'] as List? ?? const []).map(TaskConsequence.fromJson),
+      ),
+      eventLedger: List.unmodifiable(
+        (m['eventLedger'] as List? ?? const []).map(
+          ShiftEventLedgerEntry.fromJson,
+        ),
+      ),
+      interruptedBreakCount: m['interruptedBreakCount'] as int? ?? 0,
+      breakMinutesTaken: m['breakMinutesTaken'] as int? ?? 0,
     );
   }
   Map<String, dynamic> toJson() => {
@@ -221,6 +337,11 @@ class UnifiedShiftState {
     'exitView': exitView,
     'lastEventMinute': lastEventMinute,
     'notice': notice,
+    'consequencesEnabled': consequencesEnabled,
+    'consequences': consequences.map((e) => e.toJson()).toList(),
+    'eventLedger': eventLedger.map((e) => e.toJson()).toList(),
+    'interruptedBreakCount': interruptedBreakCount,
+    'breakMinutesTaken': breakMinutesTaken,
   };
 }
 
@@ -471,6 +592,7 @@ class TaskQueue {
   int get pendingCount => pending.length;
   int get documentationCount =>
       pending.where((t) => t.taskType == WorkTaskType.documentation).length;
+  bool get documentationBacklog => documentationCount >= 5;
   List<WorkTask> _sorted(Iterable<WorkTask> source) =>
       source.toList()..sort((a, b) {
         final priority = a.priority.index.compareTo(b.priority.index);
@@ -859,6 +981,24 @@ class ShiftWorkStatus {
   }
 }
 
+String? breakBlockReason(TaskQueue queue, int now) {
+  final urgent = queue.pending
+      .where((t) => t.priority == WorkPriority.urgent)
+      .length;
+  if (urgent > 0) return '緊急業務が$urgent件あります';
+  final interrupted = queue.pending
+      .where(
+        (t) => t.taskId != 'break' && t.status == WorkTaskStatus.interrupted,
+      )
+      .length;
+  if (interrupted > 0) return '中断中の業務が$interrupted件あります';
+  final mandatory = queue.pending
+      .where((t) => t.requiredToLeave && t.taskId != 'break')
+      .length;
+  if (mandatory > 0) return '必須業務が$mandatory件あります';
+  return null;
+}
+
 WorkTask infusionTask(String id, int at) => WorkTask(
   taskId: id,
   title: '点滴交換',
@@ -901,6 +1041,7 @@ List<WorkTask> availableTasks(
   TaskQueue queue,
   int now, {
   DayShiftConfig config = const DayShiftConfig(),
+  bool strictDependencies = false,
 }) {
   final phase = phaseAt(
     now,
@@ -928,8 +1069,20 @@ List<WorkTask> availableTasks(
       if (task.taskId == 'morning_handoff') return true;
       if (task.taskId == 'break') {
         return now >= (task.scheduledAt ?? 0) &&
+            (!strictDependencies || breakBlockReason(queue, now) == null) &&
             queue.tasks.firstWhere((t) => t.taskId == 'lunch_clear').status ==
                 WorkTaskStatus.completed;
+      }
+      if (strictDependencies && task.taskId.endsWith('-lunch-meds')) {
+        final meal = queue.tasks
+            .where(
+              (t) =>
+                  t.patientId == task.patientId && t.taskId.endsWith('-meal'),
+            )
+            .firstOrNull;
+        if (meal != null && meal.status != WorkTaskStatus.completed) {
+          return false;
+        }
       }
       return now >= (task.scheduledAt ?? 510);
     }

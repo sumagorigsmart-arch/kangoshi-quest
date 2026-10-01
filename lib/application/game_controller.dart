@@ -152,7 +152,12 @@ class GameController extends ChangeNotifier {
     );
     _outcomeView = null;
     if (content.events.length == 50) {
-      _commit(Transition(startUnifiedShift(initial), '勤務開始'));
+      _commit(
+        Transition(
+          startUnifiedShift(initial, enableConsequences: true),
+          '勤務開始',
+        ),
+      );
     } else {
       _commit(
         engine.dispatch(

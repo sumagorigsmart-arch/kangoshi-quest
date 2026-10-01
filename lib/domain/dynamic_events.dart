@@ -167,7 +167,14 @@ class DynamicEventEngine {
         }
         final active = s.activeTaskId;
         var remaining = s.activeTaskRemaining;
-        if (active != null && high) {
+        final interruptBreak =
+            s.consequencesEnabled && active == 'break' && high && rng % 3 == 0;
+        final shouldInterrupt =
+            active != null &&
+            (active == 'break' && s.consequencesEnabled
+                ? interruptBreak
+                : high);
+        if (shouldInterrupt) {
           final current = queue.tasks.firstWhere((t) => t.taskId == active);
           queue = queue.replace(
             current.copyWith(
@@ -185,6 +192,19 @@ class DynamicEventEngine {
             patients: patients,
             interruptSerial: serial,
             lastInterruptAt: minute,
+            interruptedBreakCount:
+                s.interruptedBreakCount + (interruptBreak ? 1 : 0),
+            eventLedger: [
+              ...s.eventLedger,
+              ShiftEventLedgerEntry(
+                eventId: id,
+                eventType: kind,
+                patientId: patient.patientId,
+                occurredAt: minute,
+                isEmergency: urgent,
+                wasInterruption: shouldInterrupt,
+              ),
+            ],
             notice: '${urgent ? '🚨 ' : ''}${patient.bedLabel} $title　Queueに追加',
           ),
           counters: result.counters.add(

@@ -1,4 +1,5 @@
 import 'dynamic_events.dart';
+import 'consequence_engine.dart';
 import 'day_shift.dart';
 import 'models.dart';
 
@@ -37,7 +38,7 @@ GameState advanceUnifiedTime(
         0,
         10000,
       );
-  return state.copyWith(
+  var advanced = state.copyWith(
     timeMinutes: state.timeMinutes + minutes,
     unifiedShift: state.unifiedShift?.copyWith(
       exitView: state.timeMinutes < 1020 && state.timeMinutes + minutes >= 1020
@@ -49,6 +50,33 @@ GameState advanceUnifiedTime(
         ? meters['bladder']
         : state.peakBladder,
   );
+  final shift = advanced.unifiedShift;
+  if (shift?.consequencesEnabled == true &&
+      advanced.workQueue != null &&
+      minutes > 0) {
+    final decision = ConsequenceEngine.evaluate(
+      queue: advanced.workQueue!,
+      patients: shift!.patients,
+      previous: shift.consequences,
+      ledger: shift.eventLedger,
+      seed: state.seed,
+      before: state.timeMinutes,
+      now: advanced.timeMinutes,
+    );
+    if (decision.consequences.isNotEmpty || decision.events.isNotEmpty) {
+      advanced = advanced.copyWith(
+        workQueue: decision.queue,
+        unifiedShift: shift.copyWith(
+          consequences: [...shift.consequences, ...decision.consequences],
+          eventLedger: [...shift.eventLedger, ...decision.events],
+          notice: decision.consequences.isEmpty
+              ? null
+              : '${decision.consequences.last.reason} → ${decision.queue.tasks.firstWhere((t) => t.taskId == decision.consequences.last.generatedTaskIds.first).title}が追加されました',
+        ),
+      );
+    }
+  }
+  return advanced;
 }
 
 const mappedEventTasks = <String, String>{
@@ -72,13 +100,16 @@ class InterruptDecision {
   const InterruptDecision(this.state, this.message);
 }
 
-GameState startUnifiedShift(GameState base) {
+GameState startUnifiedShift(GameState base, {bool enableConsequences = false}) {
   final patients = List<Patient>.unmodifiable(generatePatients());
   return base.copyWith(
     phase: 'taskSelection',
     tasks: const TaskState(0, 0, 0),
     workQueue: generatePatientRoutineTasks(patients),
-    unifiedShift: UnifiedShiftState(patients: patients),
+    unifiedShift: UnifiedShiftState(
+      patients: patients,
+      consequencesEnabled: enableConsequences,
+    ),
     clearCurrent: true,
   );
 }
@@ -156,6 +187,7 @@ TaskAction performUnifiedTask(
   if (!availableTasks(
     queue,
     state.timeMinutes,
+    strictDependencies: shift.consequencesEnabled,
   ).any((t) => t.taskId == taskId)) {
     throw StateError('Task unavailable');
   }
@@ -208,11 +240,26 @@ TaskAction performUnifiedTask(
                   .firstWhere((t) => t.taskId == taskId)
                   .status ==
               WorkTaskStatus.interrupted) {
+        if (taskId == 'break') {
+          current = current.copyWith(
+            unifiedShift: current.unifiedShift!.copyWith(
+              breakMinutesTaken:
+                  current.unifiedShift!.breakMinutesTaken + duration - left + 1,
+            ),
+          );
+        }
         return TaskAction(current, interrupted: true);
       }
     }
   }
-  final done = current.workQueue!.complete(taskId, current.timeMinutes);
+  var done = current.workQueue!.complete(taskId, current.timeMinutes);
+  if (shift.consequencesEnabled && task.taskId.endsWith('-meal')) {
+    for (final med in done.pending.where(
+      (t) => t.patientId == task.patientId && t.taskId.endsWith('-lunch-meds'),
+    )) {
+      done = done.replace(med.copyWith(scheduledAt: current.timeMinutes));
+    }
+  }
   final completed = TaskState(
     task.taskType == WorkTaskType.documentation ? 1 : 0,
     task.taskType == WorkTaskType.dynamic ? 1 : 0,
@@ -228,6 +275,9 @@ TaskAction performUnifiedTask(
       clearActive: suspendedId == null,
       activeTaskId: suspendedId,
       activeTaskRemaining: suspendedRemaining,
+      breakMinutesTaken:
+          current.unifiedShift!.breakMinutesTaken +
+          (taskId == 'break' ? duration : 0),
     ),
   );
   return TaskAction(current, completed: true);

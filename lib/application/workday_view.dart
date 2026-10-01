@@ -88,6 +88,13 @@ class DaySummary {
       patientsEnd;
   final Map<String, int> eventCounts;
   final List<({int at, String title})> timeline;
+  final int consequenceCount,
+      cascadeCount,
+      repeatedCallCount,
+      missedBreakMinutes,
+      interruptedBreakCount;
+  final List<String> majorCascades;
+  final bool documentationOvertime;
 
   const DaySummary({
     required this.finishTime,
@@ -102,6 +109,13 @@ class DaySummary {
     required this.patientsEnd,
     required this.eventCounts,
     required this.timeline,
+    this.consequenceCount = 0,
+    this.cascadeCount = 0,
+    this.repeatedCallCount = 0,
+    this.missedBreakMinutes = 0,
+    this.interruptedBreakCount = 0,
+    this.majorCascades = const [],
+    this.documentationOvertime = false,
   });
 
   factory DaySummary.fromState(GameState state) {
@@ -117,8 +131,17 @@ class DaySummary {
             .toList()
           ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     final counts = <String, int>{};
-    for (final task in roots) {
-      counts.update(task.sourceEventId!, (n) => n + 1, ifAbsent: () => 1);
+    final ledger = state.unifiedShift!.eventLedger;
+    if (ledger.isNotEmpty) {
+      for (final event in ledger.where(
+        (e) => e.eventId.startsWith('dynamic-'),
+      )) {
+        counts.update(event.eventType, (n) => n + 1, ifAbsent: () => 1);
+      }
+    } else {
+      for (final task in roots) {
+        counts.update(task.sourceEventId!, (n) => n + 1, ifAbsent: () => 1);
+      }
     }
     final major = roots
         .where(
@@ -144,16 +167,51 @@ class DaySummary {
                           state.timeMinutes > t.deadline!),
           )
           .length,
-      events: state.unifiedShift!.interruptSerial,
-      interruptions: queue.tasks.fold(0, (int n, t) => n + t.interruptionCount),
+      events: ledger.isEmpty
+          ? state.unifiedShift!.interruptSerial
+          : ledger.where((e) => e.eventId.startsWith('dynamic-')).length,
+      interruptions: ledger.isEmpty
+          ? queue.tasks.fold(0, (int n, t) => n + t.interruptionCount)
+          : ledger.where((e) => e.wasInterruption).length,
       patientsStart: state.unifiedShift!.patients
           .where((p) => !p.patientId.startsWith('admission-'))
           .length,
       patientsEnd: state.unifiedShift!.patients.length,
       eventCounts: counts,
+      consequenceCount: state.unifiedShift!.consequences.length,
+      cascadeCount: state.unifiedShift!.consequences
+          .where((c) => c.chainDepth > 1)
+          .length,
+      repeatedCallCount: state.unifiedShift!.consequences
+          .where((c) => c.triggerType == 'repeatedCall')
+          .length,
+      missedBreakMinutes:
+          (30 -
+                  (state.unifiedShift!.consequencesEnabled
+                      ? state.unifiedShift!.breakMinutesTaken
+                      : state.counters.breakMinutes))
+              .clamp(0, 30),
+      documentationOvertime:
+          state.timeMinutes > 1020 &&
+          ledger.any((e) => e.eventId == 'backlog-1020'),
+      interruptedBreakCount: state.unifiedShift!.interruptedBreakCount,
+      majorCascades: state.unifiedShift!.consequences
+          .take(5)
+          .map(
+            (c) =>
+                '${c.reason} → ${c.generatedTaskIds.map((id) => queue.tasks.firstWhere((t) => t.taskId == id).title).join(' → ')}',
+          )
+          .toList(),
       timeline: [
         (at: 510, title: '朝申し送り'),
-        for (final t in major) (at: t.createdAt, title: t.title),
+        if (ledger.isNotEmpty)
+          for (final e
+              in ledger
+                  .where((e) => e.isEmergency || e.eventType == 'admission')
+                  .take(7))
+            (at: e.occurredAt, title: e.eventType)
+        else
+          for (final t in major) (at: t.createdAt, title: t.title),
         (at: 1020, title: '定時'),
         (at: state.timeMinutes, title: '退勤'),
       ],
@@ -173,6 +231,13 @@ class DaySummary {
     'patientsEnd': patientsEnd,
     'eventCounts': eventCounts,
     'timeline': timeline.map((e) => {'at': e.at, 'title': e.title}).toList(),
+    'consequenceCount': consequenceCount,
+    'cascadeCount': cascadeCount,
+    'repeatedCallCount': repeatedCallCount,
+    'missedBreakMinutes': missedBreakMinutes,
+    'interruptedBreakCount': interruptedBreakCount,
+    'majorCascades': majorCascades,
+    'documentationOvertime': documentationOvertime,
   };
 
   factory DaySummary.fromJson(dynamic raw) {
@@ -189,6 +254,13 @@ class DaySummary {
       patientsStart: m['patientsStart'] as int,
       patientsEnd: m['patientsEnd'] as int,
       eventCounts: Map<String, int>.from(m['eventCounts'] as Map),
+      consequenceCount: m['consequenceCount'] as int? ?? 0,
+      cascadeCount: m['cascadeCount'] as int? ?? 0,
+      repeatedCallCount: m['repeatedCallCount'] as int? ?? 0,
+      missedBreakMinutes: m['missedBreakMinutes'] as int? ?? 0,
+      interruptedBreakCount: m['interruptedBreakCount'] as int? ?? 0,
+      majorCascades: List<String>.from(m['majorCascades'] as List? ?? const []),
+      documentationOvertime: m['documentationOvertime'] as bool? ?? false,
       timeline: (m['timeline'] as List).map((e) {
         final item = Map<String, dynamic>.from(e as Map);
         return (at: item['at'] as int, title: item['title'] as String);

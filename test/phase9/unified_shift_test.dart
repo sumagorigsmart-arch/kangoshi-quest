@@ -163,7 +163,7 @@ void main() {
       await store.flush();
       final raw =
           jsonDecode((await prefs.getString(PersistentShiftStore.key))!) as Map;
-      expect(raw['schemaVersion'], 5);
+      expect(raw['schemaVersion'], 6);
       expect((raw['state'] as Map)['scheduledEndReached'], false);
       expect((raw['state'] as Map)['overtimeMinutes'], 0);
       final restored = PersistentShiftStore(prefs, content);

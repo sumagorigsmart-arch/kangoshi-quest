@@ -418,7 +418,11 @@ class _QuestAppState extends State<QuestApp> {
     }
     final queue = s.workQueue!;
     final status = s.workStatus!;
-    final available = availableTasks(queue, s.timeMinutes);
+    final available = availableTasks(
+      queue,
+      s.timeMinutes,
+      strictDependencies: s.unifiedShift?.consequencesEnabled ?? false,
+    );
     final next =
         queue.pending
             .where(
@@ -591,6 +595,25 @@ class _QuestAppState extends State<QuestApp> {
                     ),
                   ),
                 ),
+              if (s.unifiedShift!.consequences.isNotEmpty &&
+                  s.timeMinutes -
+                          s.unifiedShift!.consequences.last.triggeredAt <=
+                      10)
+                Card(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Text(
+                      '${s.unifiedShift!.consequences.last.reason} → '
+                      '${queue.tasks.firstWhere((t) => t.taskId == s.unifiedShift!.consequences.last.generatedTaskIds.first).title}が追加されました',
+                    ),
+                  ),
+                ),
+              if (s.unifiedShift!.consequencesEnabled &&
+                  queue.pending.any((t) => t.taskId == 'break') &&
+                  s.timeMinutes >= 755 &&
+                  breakBlockReason(queue, s.timeMinutes) != null)
+                Text('今は休憩に行けない：${breakBlockReason(queue, s.timeMinutes)}'),
               if (interrupted.isNotEmpty)
                 _panel(
                   child: Column(
@@ -940,7 +963,11 @@ class _QuestAppState extends State<QuestApp> {
 
   Widget _workTaskPanel(GameState s) {
     final queue = s.workQueue!;
-    final available = availableTasks(queue, s.timeMinutes);
+    final available = availableTasks(
+      queue,
+      s.timeMinutes,
+      strictDependencies: s.unifiedShift?.consequencesEnabled ?? false,
+    );
     return _panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1294,6 +1321,12 @@ class _QuestAppState extends State<QuestApp> {
                     Text('完了 ${day.completed}件 / 引き継ぎ ${day.handedOff}件'),
                     Text('未記録 ${day.undocumented}件 / 期限超過 ${day.overdue}件'),
                     Text('割り込み ${day.events}件 / 中断 ${day.interruptions}回'),
+                    Text(
+                      '業務連鎖 ${day.consequenceCount}件 / 再コール ${day.repeatedCallCount}件',
+                    ),
+                    Text(
+                      '取れなかった休憩 ${day.missedBreakMinutes}分 / 休憩中断 ${day.interruptedBreakCount}回',
+                    ),
                   ],
                 ),
               ),
@@ -1305,9 +1338,6 @@ class _QuestAppState extends State<QuestApp> {
                     for (final entry in day.eventCounts.entries)
                       Text('${_dynamicKindLabel(entry.key)} ${entry.value}件'),
                     if (day.eventCounts.isEmpty) const Text('記録されたイベントはありません'),
-                    if (day.eventCounts.values.fold<int>(0, (a, b) => a + b) <
-                        day.events)
-                      const Text('種類別はTask履歴に残った割り込み分です。'),
                   ],
                 ),
               ),
@@ -1328,6 +1358,7 @@ class _QuestAppState extends State<QuestApp> {
                       Text('${day.interruptions}回、仕事を中断しました'),
                     if (day.undocumented > 0)
                       Text('未記録の仕事が${day.undocumented}件残りました'),
+                    if (day.documentationOvertime) const Text('記録残業が主な理由です'),
                     if (day.events == 0 &&
                         day.undocumented == 0 &&
                         day.interruptions == 0)
@@ -1335,6 +1366,17 @@ class _QuestAppState extends State<QuestApp> {
                   ],
                 ),
               ),
+              if (day.majorCascades.isNotEmpty) ...[
+                Text('主な業務連鎖', style: Theme.of(context).textTheme.titleLarge),
+                _panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final chain in day.majorCascades) Text(chain),
+                    ],
+                  ),
+                ),
+              ],
               ExpansionTile(
                 title: const Text('一日のタイムライン'),
                 children: [
