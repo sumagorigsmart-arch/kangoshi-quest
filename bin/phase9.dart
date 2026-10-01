@@ -11,11 +11,11 @@ Map<String, Object> simulate(
   required int interruptInterval,
   required bool delayRecords,
   required bool urgentFirst,
+  String exitStrategy = 'all',
 }) {
   var state = startUnifiedShift(
     GameState.initial(name, seed, 'phase9', 'balance_v1'),
   );
-  var completed = 0;
   var generated = 0;
   var lastForcedAt = 510;
   var steps = 0;
@@ -41,11 +41,47 @@ Map<String, Object> simulate(
         'urgent': status.urgentCount,
       };
     }
-    if (status.canLeave) break;
-    final available = availableTasks(
-      state.workQueue!,
-      state.timeMinutes,
-    ).where((t) => t.requiredToLeave || state.timeMinutes < 1020).toList();
+    if (state.timeMinutes >= 1020 && exitStrategy != 'all') {
+      final transferable = state.workQueue!.pending
+          .where(
+            (t) =>
+                t.taskType != WorkTaskType.documentation &&
+                !t.requiredToLeave &&
+                t.priority != WorkPriority.urgent,
+          )
+          .toList();
+      if (transferable.isNotEmpty) {
+        state = state.copyWith(
+          workQueue: state.workQueue!.handOff(
+            transferable.map((t) => t.taskId),
+            state.timeMinutes,
+          ),
+        );
+      }
+      if (state.workStatus!.canLeave && exitStrategy == 'quick') {
+        break;
+      }
+      if (state.workStatus!.canLeave &&
+          state.workQueue!.documentationCount == 0) {
+        break;
+      }
+    }
+    if (exitStrategy == 'all' &&
+        state.workQueue!.pending.isEmpty &&
+        state.timeMinutes >= 1020) {
+      break;
+    }
+    final available = availableTasks(state.workQueue!, state.timeMinutes)
+        .where(
+          (t) =>
+              state.timeMinutes < 1020 ||
+              exitStrategy == 'all' ||
+              t.requiredToLeave ||
+              t.priority == WorkPriority.urgent ||
+              (exitStrategy == 'handoff' &&
+                  t.taskType == WorkTaskType.documentation),
+        )
+        .toList();
     if (available.isEmpty) {
       final future =
           state.workQueue!.pending
@@ -88,7 +124,6 @@ Map<String, Object> simulate(
         state.timeMinutes >= 1020) {
       capture(before.workQueue!);
     }
-    completed++;
     if (interruptInterval > 0 &&
         state.timeMinutes - lastForcedAt >= interruptInterval &&
         state.timeMinutes < 1020) {
@@ -100,7 +135,11 @@ Map<String, Object> simulate(
   at1700 ??= {
     'pending': state.workStatus!.unfinishedTaskCount,
     'records': state.workStatus!.unfinishedRecordCount,
-    'overdue': state.workStatus!.overdueCount,
+    'overdue':
+        state.workStatus!.overdueCount +
+        state.workQueue!.handedOff
+            .where((t) => t.deadline != null && t.handedOffAt! > t.deadline!)
+            .length,
     'urgent': state.workStatus!.urgentCount,
   };
   return {
@@ -112,7 +151,8 @@ Map<String, Object> simulate(
     'remainingRecords': state.workStatus!.unfinishedRecordCount,
     'overdue': state.workStatus!.overdueCount,
     'interruptions': generated,
-    'completed': completed,
+    'completed': state.workQueue!.completed.length,
+    'handedOff': state.workQueue!.handedOff.length,
     'canLeave': state.workStatus!.canLeave,
   };
 }
@@ -146,6 +186,30 @@ void main() {
       interruptInterval: 45,
       delayRecords: false,
       urgentFirst: true,
+    ),
+    simulate(
+      '全部やる',
+      17,
+      interruptInterval: 45,
+      delayRecords: false,
+      urgentFirst: true,
+      exitStrategy: 'all',
+    ),
+    simulate(
+      '引き継ぐ',
+      17,
+      interruptInterval: 45,
+      delayRecords: false,
+      urgentFirst: true,
+      exitStrategy: 'handoff',
+    ),
+    simulate(
+      'とにかく帰る',
+      17,
+      interruptInterval: 45,
+      delayRecords: false,
+      urgentFirst: true,
+      exitStrategy: 'quick',
     ),
   ];
   stdout.writeln(const JsonEncoder.withIndent('  ').convert(results));

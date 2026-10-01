@@ -394,6 +394,39 @@ class GameController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setExitView(String view) {
+    final s = _state;
+    if (s == null ||
+        s.unifiedShift == null ||
+        s.timeMinutes < 1020 ||
+        s.phase != 'taskSelection' ||
+        !{'decision', 'handoff', 'work', 'confirm'}.contains(view)) {
+      return;
+    }
+    _state = s.copyWith(unifiedShift: s.unifiedShift!.copyWith(exitView: view));
+    store.save(_state!, null);
+    notifyListeners();
+  }
+
+  bool handOffTasks(Iterable<String> ids) {
+    final s = _state;
+    if (s == null ||
+        s.unifiedShift == null ||
+        s.timeMinutes < 1020 ||
+        s.phase != 'taskSelection' ||
+        s.unifiedShift!.activeTaskId != null) {
+      return false;
+    }
+    try {
+      _state = s.copyWith(workQueue: s.workQueue!.handOff(ids, s.timeMinutes));
+      store.save(_state!, null);
+      notifyListeners();
+      return true;
+    } on StateError {
+      return false;
+    }
+  }
+
   bool finishUnifiedShift() {
     final state = _state;
     if (state == null ||
@@ -403,10 +436,59 @@ class GameController extends ChangeNotifier {
       return false;
     }
     final status = state.workStatus!;
+    final queue = state.workQueue!;
+    final incomplete = queue.pending
+        .where((t) => t.taskType == WorkTaskType.documentation)
+        .toList();
+    final handed = queue.handedOff;
+    final overdueRecords = incomplete
+        .where(
+          (t) => deadlineState(t, state.timeMinutes) == DeadlineState.overdue,
+        )
+        .length;
+    final overdueHanded = handed
+        .where((t) => t.deadline != null && t.handedOffAt! > t.deadline!)
+        .length;
     final evaluated = engine.evaluate(state, 'normal');
+    final penalty = handed.fold<int>(
+      0,
+      (sum, t) =>
+          sum +
+          (t.priority == WorkPriority.high
+              ? 350
+              : t.priority == WorkPriority.normal
+              ? 180
+              : 80) +
+          (t.deadline != null && t.handedOffAt! > t.deadline! ? 180 : 0),
+    );
+    final axis = Map<String, int>.from(evaluated.axisScores);
+    axis['team'] = (axis['team']! - penalty).clamp(0, 10000);
+    axis['patient'] = (axis['patient']! - penalty ~/ 2).clamp(0, 10000);
+    axis['safety'] =
+        (axis['safety']! -
+                incomplete.length * 550 -
+                overdueRecords * 350 -
+                overdueHanded * 100)
+            .clamp(0, 10000);
+    final adjusted = engine.evaluate(
+      state.copyWith(
+        scores: {
+          ...state.scores,
+          'patient': axis['patient']!,
+          'team': axis['team']!,
+          'risk': 10000 - axis['safety']!,
+        },
+      ),
+      'normal',
+    );
+    final exitType = handed.isEmpty
+        ? (incomplete.isEmpty ? 'cleanExit' : 'incompleteRecordExit')
+        : (incomplete.isEmpty
+              ? 'handedOffExit'
+              : 'handedOffAndIncompleteRecordExit');
     final result = GameResult(
       'normal',
-      evaluated.primaryTitleId,
+      adjusted.primaryTitleId,
       1020,
       state.timeMinutes,
       status.overtimeMinutes,
@@ -414,9 +496,35 @@ class GameController extends ChangeNotifier {
       const TaskState(0, 0, 0),
       const TaskState(0, 0, 0),
       state.counters,
-      evaluated.axisScores,
-      evaluated.grades,
-      evaluated.earnedTitleIds,
+      adjusted.axisScores,
+      adjusted.grades,
+      adjusted.earnedTitleIds,
+      exitType: exitType,
+      completedTaskCount: queue.completed.length,
+      handedOffTaskCount: handed.length,
+      incompleteRecordCount: incomplete.length,
+      overdueTaskCount: status.overdueCount + overdueHanded,
+      overdueRecordCount: overdueRecords,
+      incompleteRecordPatients: incomplete
+          .map((t) => t.patientId)
+          .whereType<String>()
+          .toSet()
+          .length,
+      urgentResponseCount: queue.completed
+          .where((t) => t.priority == WorkPriority.urgent)
+          .length,
+      handedOffImportance: handed.fold<int>(
+        0,
+        (sum, t) =>
+            sum +
+            (t.priority == WorkPriority.high
+                ? 3
+                : t.priority == WorkPriority.normal
+                ? 2
+                : 1),
+      ),
+      completedTaskIds: queue.completed.map((t) => t.taskId).toList(),
+      handedOffTaskIds: handed.map((t) => t.taskId).toList(),
     );
     _commit(
       Transition(state.copyWith(phase: 'completed', result: result), '勤務終了'),

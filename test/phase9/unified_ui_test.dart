@@ -39,10 +39,10 @@ void main() {
       expect(find.byKey(const Key('unifiedPending')), findsOneWidget);
       controller.advanceWorkClock(510);
       await tester.pumpAndSettle();
-      expect(find.textContaining('定時到達'), findsWidgets);
-      expect(find.byKey(const Key('unifiedOverdue')), findsOneWidget);
-      expect(find.byKey(const Key('unifiedRecords')), findsOneWidget);
-      expect(find.byKey(const Key('unifiedUrgent')), findsOneWidget);
+      expect(find.textContaining('定時になりました'), findsWidgets);
+      expect(find.textContaining('期限超過'), findsWidgets);
+      expect(find.textContaining('未記録'), findsWidgets);
+      expect(find.textContaining('緊急'), findsWidgets);
       expect(tester.takeException(), isNull);
     },
   );

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../content/content_loader.dart';
+import '../domain/day_shift.dart';
 import '../domain/models.dart';
 import 'game_controller.dart';
 
@@ -44,10 +45,26 @@ class PersistentShiftStore implements ShiftStore {
     final data = Map<String, dynamic>.from(jsonDecode(raw) as Map);
     if (data['schemaVersion'] != 1 &&
         data['schemaVersion'] != 2 &&
-        data['schemaVersion'] != 3) {
+        data['schemaVersion'] != 3 &&
+        data['schemaVersion'] != 4) {
       throw const FormatException('schema');
     }
-    final state = GameState.fromJson(data['state']);
+    var state = GameState.fromJson(data['state']);
+    if (data['schemaVersion'] == 3 &&
+        state.unifiedShift != null &&
+        state.workQueue != null) {
+      state = state.copyWith(
+        workQueue: TaskQueue(
+          state.workQueue!.tasks.map(
+            (t) => t.copyWith(
+              requiredToLeave:
+                  t.taskId == 'morning_handoff' ||
+                  t.priority == WorkPriority.urgent,
+            ),
+          ),
+        ),
+      );
+    }
     final counters = Map<String, dynamic>.from(
       Map<String, dynamic>.from(data['state'] as Map)['counters'] as Map,
     );
@@ -185,7 +202,7 @@ class PersistentShiftStore implements ShiftStore {
     _current = state;
     _outcomeView = outcomeView;
     final raw = jsonEncode({
-      'schemaVersion': state.unifiedShift == null ? 2 : 3,
+      'schemaVersion': state.unifiedShift == null ? 2 : 4,
       'startedAtMillis': _startedAtMillis,
       'state': state.toJson(),
       'outcomeView': outcomeView == null

@@ -27,6 +27,7 @@ class QuestApp extends StatefulWidget {
 
 class _QuestAppState extends State<QuestApp> {
   String page = 'home';
+  final Set<String> _handoffSelection = {};
   ShiftRecord? selectedRecord;
   final GlobalKey _cardKey = GlobalKey();
   @override
@@ -397,6 +398,11 @@ class _QuestAppState extends State<QuestApp> {
   }
 
   Widget _unifiedGame(GameState s) {
+    if (s.timeMinutes >= 1020 &&
+        s.phase == 'taskSelection' &&
+        s.unifiedShift!.exitView != 'work') {
+      return _exitScreen(s);
+    }
     final queue = s.workQueue!;
     final status = s.workStatus!;
     final available = availableTasks(queue, s.timeMinutes);
@@ -558,13 +564,11 @@ class _QuestAppState extends State<QuestApp> {
               for (final task in next.take(6))
                 Text('${gameTime(task.scheduledAt!)}　${task.title}'),
               if (next.length > 6) Text('ほか ${next.length - 6}件'),
-              if (status.scheduledEndReached &&
-                  status.canLeave &&
-                  s.phase == 'taskSelection')
+              if (status.scheduledEndReached && s.phase == 'taskSelection')
                 FilledButton(
                   key: const Key('leaveShift'),
-                  onPressed: widget.controller.finishUnifiedShift,
-                  child: const Text('勤務を終了する'),
+                  onPressed: () => widget.controller.setExitView('decision'),
+                  child: const Text('退勤判断へ'),
                 ),
               ExpansionTile(
                 title: const Text('体調・状態（補助情報）'),
@@ -572,6 +576,153 @@ class _QuestAppState extends State<QuestApp> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _exitScreen(GameState s) {
+    final queue = s.workQueue!;
+    final status = s.workStatus!;
+    final view = s.unifiedShift!.exitView;
+    final transferable = queue.pending
+        .where(
+          (t) =>
+              t.taskType != WorkTaskType.documentation &&
+              !t.requiredToLeave &&
+              t.priority != WorkPriority.urgent,
+        )
+        .toList();
+    final blockers = queue.pending
+        .where(
+          (t) =>
+              t.taskType != WorkTaskType.documentation &&
+              (t.requiredToLeave || t.priority == WorkPriority.urgent),
+        )
+        .toList();
+    final patients = {
+      for (final p in s.unifiedShift!.patients) p.patientId: p.bedLabel,
+    };
+    return SafeArea(
+      child: _pageFrame(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              '${gameTime(s.timeMinutes)}　定時になりました',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            Text('残業 ${status.overtimeMinutes}分'),
+            const SizedBox(height: 12),
+            _panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('今日の仕事', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    '未処理 ${status.unfinishedTaskCount}件　未記録 ${status.unfinishedRecordCount}件',
+                  ),
+                  Text(
+                    '期限超過 ${status.overdueCount}件　緊急 ${status.urgentCount}件',
+                  ),
+                  Text('引き継ぎ済み ${queue.handedOff.length}件'),
+                ],
+              ),
+            ),
+            if (blockers.isNotEmpty || s.unifiedShift!.activeTaskId != null)
+              _panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('この仕事を残しては帰れません'),
+                    for (final task in blockers.take(5)) Text('・${task.title}'),
+                    if (s.unifiedShift!.activeTaskId != null)
+                      const Text('・中断中のTaskがあります'),
+                  ],
+                ),
+              ),
+            if (blockers.isEmpty && transferable.isNotEmpty)
+              const Text('未処理の仕事は、処理するか夜勤へ引き継いでください。'),
+            if (view == 'decision') ...[
+              FilledButton(
+                onPressed: () => widget.controller.setExitView('work'),
+                child: const Text('残って仕事する'),
+              ),
+              OutlinedButton(
+                onPressed: transferable.isEmpty
+                    ? null
+                    : () => widget.controller.setExitView('handoff'),
+                child: Text('引き継げる仕事を見る（${transferable.length}件）'),
+              ),
+              FilledButton(
+                key: const Key('finishShift'),
+                onPressed: status.canLeave
+                    ? () => widget.controller.setExitView('confirm')
+                    : null,
+                child: const Text('勤務終了'),
+              ),
+            ],
+            if (view == 'handoff') ...[
+              Text('夜勤・遅番へ引き継ぐ', style: Theme.of(context).textTheme.titleLarge),
+              const Text('重要な仕事と期限超過を確認して選択してください。'),
+              for (final task in transferable)
+                CheckboxListTile(
+                  key: Key('handoff-${task.taskId}'),
+                  value: _handoffSelection.contains(task.taskId),
+                  onChanged: (v) => setState(() {
+                    if (v == true) {
+                      _handoffSelection.add(task.taskId);
+                    } else {
+                      _handoffSelection.remove(task.taskId);
+                    }
+                  }),
+                  title: Text(
+                    '${patients[task.patientId] ?? '病棟'}　${task.title}',
+                  ),
+                  subtitle: Text(
+                    '優先度 ${task.priority.name}・予定 ${task.scheduledAt == null ? 'なし' : gameTime(task.scheduledAt!)}'
+                    '・期限 ${task.deadline == null ? 'なし' : gameTime(task.deadline!)}'
+                    '${deadlineState(task, s.timeMinutes) == DeadlineState.overdue ? '・期限超過' : ''}',
+                  ),
+                ),
+              FilledButton(
+                onPressed: _handoffSelection.isEmpty
+                    ? null
+                    : () {
+                        if (widget.controller.handOffTasks(_handoffSelection)) {
+                          setState(() => _handoffSelection.clear());
+                          widget.controller.setExitView('decision');
+                        }
+                      },
+                child: Text('選択した${_handoffSelection.length}件を夜勤へ引き継ぐ'),
+              ),
+              TextButton(
+                onPressed: () => widget.controller.setExitView('decision'),
+                child: const Text('退勤判断に戻る'),
+              ),
+            ],
+            if (view == 'confirm') ...[
+              Text(
+                '本当に帰りますか？',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              Text(
+                '引き継ぎ ${queue.handedOff.length}件　未記録 ${status.unfinishedRecordCount}件',
+              ),
+              const Text('このまま帰ると勤務評価に影響します。'),
+              OutlinedButton(
+                onPressed: () => widget.controller.setExitView('decision'),
+                child: const Text('まだ残る'),
+              ),
+              FilledButton(
+                key: const Key('confirmExit'),
+                onPressed: status.canLeave
+                    ? widget.controller.finishUnifiedShift
+                    : null,
+                child: const Text('今日は帰る'),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -895,6 +1046,13 @@ class _QuestAppState extends State<QuestApp> {
 
   Widget _recordView(ShiftRecord record, {required bool live}) {
     final result = record.result;
+    final exitLabel = switch (result.exitType) {
+      'cleanExit' => '完全退勤',
+      'handedOffExit' => '引き継いで退勤',
+      'incompleteRecordExit' => '記録を残して退勤',
+      'handedOffAndIncompleteRecordExit' => '全部置いて帰宅',
+      _ => null,
+    };
     final label = result.reason == 'forcedRelief'
         ? '応援を呼んで勤務終了'
         : result.overtimeMinutes == 0
@@ -926,6 +1084,26 @@ class _QuestAppState extends State<QuestApp> {
                   ),
                   const SizedBox(height: 6),
                   Text(label, style: Theme.of(context).textTheme.headlineSmall),
+                  if (exitLabel != null) ...[
+                    Text(
+                      exitLabel,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    Text(switch (result.exitType) {
+                      'cleanExit' => '全部終わらせて帰宅。',
+                      'handedOffExit' =>
+                        '残り${result.handedOffTaskCount}件を夜勤へ託した。',
+                      'incompleteRecordExit' => '身体は帰った。記録は残った。',
+                      _ => '仕事は終わっていない。でもあなたの勤務は終わった。',
+                    }),
+                    Text(
+                      '完了 ${result.completedTaskCount}件　引き継ぎ ${result.handedOffTaskCount}件',
+                    ),
+                    Text(
+                      '未記録 ${result.incompleteRecordCount}件　期限超過 ${result.overdueTaskCount}件',
+                    ),
+                    Text('緊急対応 ${result.urgentResponseCount}件'),
+                  ],
                   const SizedBox(height: 12),
                   Text(
                     result.overtimeMinutes == 0

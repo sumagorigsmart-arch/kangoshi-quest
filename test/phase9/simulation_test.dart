@@ -51,4 +51,34 @@ void main() {
       lessThan(busy['overtimeMinutes'] as int),
     );
   });
+
+  test('exit strategies change overtime, completed and unfinished records', () {
+    Map<String, Object> run(String strategy) => simulate(
+      strategy,
+      17,
+      interruptInterval: 45,
+      delayRecords: false,
+      urgentFirst: true,
+      exitStrategy: strategy,
+    );
+    final all = run('all');
+    final handoff = run('handoff');
+    final quick = run('quick');
+    expect(all['handedOff'], 0);
+    expect(handoff['handedOff'], greaterThan(0));
+    expect(quick['handedOff'], greaterThan(0));
+    expect(
+      all['overtimeMinutes'] as int,
+      greaterThan(handoff['overtimeMinutes'] as int),
+    );
+    expect(
+      quick['overtimeMinutes'] as int,
+      lessThanOrEqualTo(handoff['overtimeMinutes'] as int),
+    );
+    expect(
+      quick['remainingRecords'] as int,
+      greaterThanOrEqualTo(handoff['remainingRecords'] as int),
+    );
+    expect(all['completed'] as int, greaterThan(handoff['completed'] as int));
+  });
 }

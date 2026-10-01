@@ -38,6 +38,11 @@ GameState advanceUnifiedTime(
       );
   return state.copyWith(
     timeMinutes: state.timeMinutes + minutes,
+    unifiedShift: state.unifiedShift?.copyWith(
+      exitView: state.timeMinutes < 1020 && state.timeMinutes + minutes >= 1020
+          ? 'decision'
+          : null,
+    ),
     meters: meters,
     peakBladder: meters['bladder']! > state.peakBladder
         ? meters['bladder']
@@ -137,6 +142,7 @@ InterruptDecision rollInterrupt(
     priority: urgent ? WorkPriority.urgent : WorkPriority.high,
     taskType: WorkTaskType.dynamic,
     documentationMinutes: urgent ? 6 : 3,
+    requiredToLeave: urgent,
   );
   var result = state.copyWith(
     rngState: random,
@@ -231,9 +237,10 @@ TaskAction performUnifiedTask(
   final duration = (remaining < 1 ? 1 : remaining) + lateMinutes;
   if (allowInterrupt && duration >= 4 && shift.activeTaskId == null) {
     final midway = (duration / 2).floor();
-    final partial = advanceUnifiedTime(state, midway).copyWith(
+    final advanced = advanceUnifiedTime(state, midway);
+    final partial = advanced.copyWith(
       rngState: rng,
-      unifiedShift: shift.copyWith(
+      unifiedShift: advanced.unifiedShift!.copyWith(
         activeTaskId: taskId,
         activeTaskRemaining: duration - midway,
       ),
@@ -257,9 +264,11 @@ TaskAction performUnifiedTask(
       completed: completed,
       breakMinutes: task.taskId == 'break' ? duration : 0,
     ),
-    unifiedShift: shift.activeTaskId == taskId
-        ? shift.copyWith(clearActive: true)
-        : shift,
+    unifiedShift:
+        (state.timeMinutes < 1020 && now >= 1020
+                ? shift.copyWith(exitView: 'decision')
+                : shift)
+            .copyWith(clearActive: shift.activeTaskId == taskId),
   );
   final decision = allowInterrupt
       ? rollInterrupt(next, events: events)
@@ -337,6 +346,7 @@ class EventTaskAdapter {
           taskType: WorkTaskType.dynamic,
           sourceEventId: event.eventId,
           documentationMinutes: 4,
+          requiredToLeave: event.eventId == 'acute_warning',
         ),
       );
     }
@@ -351,6 +361,7 @@ class EventTaskAdapter {
           estimatedMinutes: 5,
           taskType: WorkTaskType.documentation,
           sourceEventId: event.eventId,
+          requiredToLeave: false,
         ),
       );
     }
@@ -368,6 +379,7 @@ class EventTaskAdapter {
           taskType: WorkTaskType.dynamic,
           sourceEventId: event.eventId,
           documentationMinutes: 5,
+          requiredToLeave: false,
         ),
       );
     }
@@ -385,6 +397,7 @@ class EventTaskAdapter {
           taskType: WorkTaskType.dynamic,
           sourceEventId: event.eventId,
           documentationMinutes: 5,
+          requiredToLeave: true,
         ),
       );
     }

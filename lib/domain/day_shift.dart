@@ -13,7 +13,7 @@ enum ShiftPhase {
 
 enum WorkTaskType { routine, dynamic, documentation }
 
-enum WorkTaskStatus { pending, completed, expired }
+enum WorkTaskStatus { pending, completed, handedOff, expired }
 
 enum WorkPriority { urgent, high, normal, low }
 
@@ -155,12 +155,14 @@ class UnifiedShiftState {
   final int interruptSerial, lastInterruptAt;
   final String? activeTaskId;
   final int activeTaskRemaining;
+  final String exitView;
   const UnifiedShiftState({
     required this.patients,
     this.interruptSerial = 0,
     this.lastInterruptAt = 510,
     this.activeTaskId,
     this.activeTaskRemaining = 0,
+    this.exitView = 'work',
   });
   UnifiedShiftState copyWith({
     List<Patient>? patients,
@@ -169,6 +171,7 @@ class UnifiedShiftState {
     String? activeTaskId,
     int? activeTaskRemaining,
     bool clearActive = false,
+    String? exitView,
   }) => UnifiedShiftState(
     patients: patients ?? this.patients,
     interruptSerial: interruptSerial ?? this.interruptSerial,
@@ -177,6 +180,7 @@ class UnifiedShiftState {
     activeTaskRemaining: clearActive
         ? 0
         : activeTaskRemaining ?? this.activeTaskRemaining,
+    exitView: exitView ?? this.exitView,
   );
   factory UnifiedShiftState.fromJson(dynamic raw) {
     final m = Map<String, dynamic>.from(raw as Map);
@@ -188,6 +192,7 @@ class UnifiedShiftState {
       lastInterruptAt: m['lastInterruptAt'] as int? ?? 510,
       activeTaskId: m['activeTaskId'] as String?,
       activeTaskRemaining: m['activeTaskRemaining'] as int? ?? 0,
+      exitView: m['exitView'] as String? ?? 'work',
     );
   }
   Map<String, dynamic> toJson() => {
@@ -196,6 +201,7 @@ class UnifiedShiftState {
     'lastInterruptAt': lastInterruptAt,
     'activeTaskId': activeTaskId,
     'activeTaskRemaining': activeTaskRemaining,
+    'exitView': exitView,
   };
 }
 
@@ -244,6 +250,7 @@ class WorkTask {
   final String taskId, title;
   final int createdAt, estimatedMinutes, documentationMinutes;
   final int? scheduledAt, deadline;
+  final int? handedOffAt;
   final WorkPriority priority;
   final WorkTaskStatus status;
   final WorkTaskType taskType;
@@ -256,6 +263,7 @@ class WorkTask {
     required this.createdAt,
     this.scheduledAt,
     this.deadline,
+    this.handedOffAt,
     required this.estimatedMinutes,
     this.priority = WorkPriority.normal,
     this.status = WorkTaskStatus.pending,
@@ -272,12 +280,15 @@ class WorkTask {
     WorkTaskStatus? status,
     int? deadline,
     int? scheduledAt,
+    int? handedOffAt,
+    bool? requiredToLeave,
   }) => WorkTask(
     taskId: taskId,
     title: title,
     createdAt: createdAt,
     scheduledAt: scheduledAt ?? this.scheduledAt,
     deadline: deadline ?? this.deadline,
+    handedOffAt: handedOffAt ?? this.handedOffAt,
     estimatedMinutes: estimatedMinutes,
     priority: priority,
     status: status ?? this.status,
@@ -288,7 +299,7 @@ class WorkTask {
     parentTaskId: parentTaskId,
     routineCategory: routineCategory,
     shiftPhase: shiftPhase,
-    requiredToLeave: requiredToLeave,
+    requiredToLeave: requiredToLeave ?? this.requiredToLeave,
   );
   factory WorkTask.fromJson(dynamic raw) {
     final m = Map<String, dynamic>.from(raw as Map);
@@ -298,6 +309,7 @@ class WorkTask {
       createdAt: m['createdAt'] as int,
       scheduledAt: m['scheduledAt'] as int?,
       deadline: m['deadline'] as int?,
+      handedOffAt: m['handedOffAt'] as int?,
       estimatedMinutes: m['estimatedMinutes'] as int,
       priority: WorkPriority.values.byName(m['priority'] as String),
       status: WorkTaskStatus.values.byName(m['status'] as String),
@@ -319,6 +331,7 @@ class WorkTask {
     'createdAt': createdAt,
     'scheduledAt': scheduledAt,
     'deadline': deadline,
+    'handedOffAt': handedOffAt,
     'estimatedMinutes': estimatedMinutes,
     'priority': priority.name,
     'status': status.name,
@@ -362,6 +375,31 @@ class TaskQueue {
       _sorted(tasks.where((t) => t.status == WorkTaskStatus.pending));
   List<WorkTask> get completed =>
       tasks.where((t) => t.status == WorkTaskStatus.completed).toList();
+  List<WorkTask> get handedOff =>
+      tasks.where((t) => t.status == WorkTaskStatus.handedOff).toList();
+  TaskQueue handOff(Iterable<String> ids, int now) {
+    final selected = ids.toSet();
+    if (selected.isEmpty || selected.length != ids.length) {
+      throw StateError('Select unique tasks');
+    }
+    for (final id in selected) {
+      final task = tasks.firstWhere((t) => t.taskId == id);
+      if (task.status != WorkTaskStatus.pending ||
+          task.taskType == WorkTaskType.documentation ||
+          task.requiredToLeave ||
+          task.priority == WorkPriority.urgent) {
+        throw StateError('Task cannot be handed off');
+      }
+    }
+    return TaskQueue(
+      tasks.map(
+        (t) => selected.contains(t.taskId)
+            ? t.copyWith(status: WorkTaskStatus.handedOff, handedOffAt: now)
+            : t,
+      ),
+    );
+  }
+
   List<WorkTask> overdue(int now) => pending
       .where((t) => deadlineState(t, now) == DeadlineState.overdue)
       .toList();
@@ -411,6 +449,7 @@ class TaskQueue {
           sourceEventId: task.sourceEventId,
           patientId: task.patientId,
           deadline: now + 120,
+          requiredToLeave: false,
         ),
       );
     }
@@ -507,7 +546,7 @@ TaskQueue generatePatientRoutineTasks(
     int documentation = 0,
     WorkPriority priority = WorkPriority.normal,
     int? deadline,
-    bool requiredToLeave = true,
+    bool requiredToLeave = false,
   }) {
     tasks.add(
       WorkTask(
@@ -535,6 +574,7 @@ TaskQueue generatePatientRoutineTasks(
     20,
     ShiftPhase.morningHandoff,
     deadline: 530,
+    requiredToLeave: true,
   );
   for (var i = 0; i < patients.length; i++) {
     final p = patients[i];
@@ -702,15 +742,15 @@ class ShiftWorkStatus {
     TaskQueue queue,
     int now, {
     DayShiftConfig config = const DayShiftConfig(),
+    String? activeTaskId,
   }) {
     final pending = queue.pending;
     final end = now >= config.finish;
     return ShiftWorkStatus(
       end,
       end &&
-          !pending.any(
-            (t) => t.requiredToLeave || t.priority == WorkPriority.urgent,
-          ),
+          activeTaskId == null &&
+          !pending.any((t) => t.taskType != WorkTaskType.documentation),
       (now - config.finish).clamp(0, 99999),
       pending.length,
       queue.documentationCount,

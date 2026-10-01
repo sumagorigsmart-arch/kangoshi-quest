@@ -471,12 +471,22 @@ class TitleDefinition {
 
 class GameResult {
   final String reason, primaryTitleId;
+  final String exitType;
+  final int completedTaskCount,
+      handedOffTaskCount,
+      incompleteRecordCount,
+      overdueTaskCount,
+      overdueRecordCount,
+      incompleteRecordPatients,
+      urgentResponseCount,
+      handedOffImportance;
   final int plannedFinishTime, finishTime, overtimeMinutes, peakBladder;
   final TaskState remainingTasks, unresolvedAtRelief;
   final Counters counters;
   final Map<String, int> axisScores;
   final Map<String, String> grades;
   final List<String> earnedTitleIds;
+  final List<String> completedTaskIds, handedOffTaskIds;
   GameResult(
     this.reason,
     this.primaryTitleId,
@@ -489,10 +499,21 @@ class GameResult {
     this.counters,
     Map<String, int> axisScores,
     Map<String, String> grades,
-    List<String> earnedTitleIds,
-  ) : axisScores = UnmodifiableMapView(Map.of(axisScores)),
-      grades = UnmodifiableMapView(Map.of(grades)),
-      earnedTitleIds = List.unmodifiable(earnedTitleIds);
+    List<String> earnedTitleIds, {
+    this.exitType = 'legacy',
+    this.completedTaskCount = 0,
+    this.handedOffTaskCount = 0,
+    this.incompleteRecordCount = 0,
+    this.overdueTaskCount = 0,
+    this.overdueRecordCount = 0,
+    this.incompleteRecordPatients = 0,
+    this.urgentResponseCount = 0,
+    this.handedOffImportance = 0,
+    this.completedTaskIds = const [],
+    this.handedOffTaskIds = const [],
+  }) : axisScores = UnmodifiableMapView(Map.of(axisScores)),
+       grades = UnmodifiableMapView(Map.of(grades)),
+       earnedTitleIds = List.unmodifiable(earnedTitleIds);
   factory GameResult.fromJson(dynamic value) {
     final m = object(value);
     return GameResult(
@@ -508,6 +529,21 @@ class GameResult {
       object(m['axisScores']).map((k, v) => MapEntry(k, v as int)),
       object(m['grades']).map((k, v) => MapEntry(k, v as String)),
       List<String>.from(m['earnedTitleIds']),
+      exitType: m['exitType'] as String? ?? 'legacy',
+      completedTaskCount: m['completedTaskCount'] as int? ?? 0,
+      handedOffTaskCount: m['handedOffTaskCount'] as int? ?? 0,
+      incompleteRecordCount: m['incompleteRecordCount'] as int? ?? 0,
+      overdueTaskCount: m['overdueTaskCount'] as int? ?? 0,
+      overdueRecordCount: m['overdueRecordCount'] as int? ?? 0,
+      incompleteRecordPatients: m['incompleteRecordPatients'] as int? ?? 0,
+      urgentResponseCount: m['urgentResponseCount'] as int? ?? 0,
+      handedOffImportance: m['handedOffImportance'] as int? ?? 0,
+      completedTaskIds: List<String>.from(
+        m['completedTaskIds'] as List? ?? const [],
+      ),
+      handedOffTaskIds: List<String>.from(
+        m['handedOffTaskIds'] as List? ?? const [],
+      ),
     );
   }
   Map<String, dynamic> toJson() => {
@@ -523,6 +559,17 @@ class GameResult {
     'axisScores': axisScores,
     'grades': grades,
     'earnedTitleIds': earnedTitleIds,
+    'exitType': exitType,
+    'completedTaskCount': completedTaskCount,
+    'handedOffTaskCount': handedOffTaskCount,
+    'incompleteRecordCount': incompleteRecordCount,
+    'overdueTaskCount': overdueTaskCount,
+    'overdueRecordCount': overdueRecordCount,
+    'incompleteRecordPatients': incompleteRecordPatients,
+    'urgentResponseCount': urgentResponseCount,
+    'handedOffImportance': handedOffImportance,
+    'completedTaskIds': completedTaskIds,
+    'handedOffTaskIds': handedOffTaskIds,
   };
 }
 
@@ -531,7 +578,11 @@ class GameState {
   final UnifiedShiftState? unifiedShift;
   ShiftWorkStatus? get workStatus => workQueue == null || unifiedShift == null
       ? null
-      : ShiftWorkStatus.from(workQueue!, timeMinutes);
+      : ShiftWorkStatus.from(
+          workQueue!,
+          timeMinutes,
+          activeTaskId: unifiedShift!.activeTaskId,
+        );
   ShiftPhase? get shiftPhase {
     final queue = workQueue;
     if (queue == null) return null;

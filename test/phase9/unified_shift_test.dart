@@ -163,7 +163,7 @@ void main() {
       await store.flush();
       final raw =
           jsonDecode((await prefs.getString(PersistentShiftStore.key))!) as Map;
-      expect(raw['schemaVersion'], 3);
+      expect(raw['schemaVersion'], 4);
       expect((raw['state'] as Map)['scheduledEndReached'], false);
       expect((raw['state'] as Map)['overtimeMinutes'], 0);
       final restored = PersistentShiftStore(prefs, content);
@@ -174,6 +174,12 @@ void main() {
         controller.state!.workQueue!.pendingCount,
       );
       expect(restored.current!.unifiedShift!.patients.length, 6);
+      final v3Raw = Map<String, dynamic>.from(raw)..['schemaVersion'] = 3;
+      await prefs.setString(PersistentShiftStore.key, jsonEncode(v3Raw));
+      final v3 = PersistentShiftStore(prefs, content);
+      await v3.load();
+      expect(v3.error, isNull);
+      expect(v3.current!.unifiedShift!.patients.length, 6);
       final legacy = Map<String, dynamic>.from(raw);
       legacy['schemaVersion'] = 2;
       final oldState = Map<String, dynamic>.from(legacy['state'] as Map);
